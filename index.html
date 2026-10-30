@@ -1,0 +1,288 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Know Before You Go - Week 8</title>
+<style>
+:root{
+  --bg:#FFFBF5; --surface:#FFFFFF; --ink:#0A2343; --muted:rgba(10,35,67,.72);
+  --navy:#0A2343; --orange:#F37021; --line:#CFC3B4; --tint:#CFC3B4;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --body:"Barlow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0A2343; --surface:#0A2343; --ink:#FFFFFF; --muted:rgba(255,255,255,.75);
+    --navy:#FFFFFF; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0A2343; --surface:#0A2343; --ink:#FFFFFF; --muted:rgba(255,255,255,.75);
+  --navy:#FFFFFF; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--body)}
+.wrap{max-width:960px;margin:0 auto;padding-inline:16px;padding-block:0 56px}
+a{color:var(--orange)}
+h1,h2,h3{font-family:var(--display);text-transform:uppercase;letter-spacing:.02em;line-height:1.05;text-wrap:balance;margin:0}
+.hero{background:var(--navy);color:#FFFFFF;margin:0;padding:28px 16px 34px;position:relative}
+.hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:20px;background:linear-gradient(var(--orange) 0 14px,#0064B5 14px 20px)}
+.hero .wrap{padding-block:0}
+.eyebrow{font-family:var(--display);font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:14px;color:#F37021}
+.hero h1{font-weight:800;font-size:clamp(40px,8vw,68px);margin-top:4px}
+.hero p{margin:10px 0 0;color:#FFFFFF;max-width:60ch}
+.nav{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 8px}
+.nav a{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:14px;text-decoration:none;color:var(--navy);background:var(--surface);border:1px solid var(--line);padding:6px 12px;border-radius:3px}
+[data-theme="dark"] .nav a, :root:not([data-theme="light"]) .nav a{color:var(--ink)}
+a:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+section{margin-top:48px;scroll-margin-top:16px}
+section > h2{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;font-size:30px;font-weight:800;color:var(--navy);border-left:8px solid #0064B5;padding-left:12px}
+[data-theme="dark"] section > h2, :root:not([data-theme="light"]) section > h2{color:var(--ink)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;margin-top:16px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:16px}
+.label{font-family:var(--display);text-transform:uppercase;letter-spacing:.06em;font-size:20px;font-weight:800;color:#0064B5;line-height:1.1}
+.value{font-weight:600;margin-top:2px}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+.tablewrap{overflow-x:auto}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:13px;color:var(--muted);font-weight:600}
+td.time{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.note{font-size:14px;color:var(--muted);margin-top:10px}
+.steps-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.ticket-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:640px){.steps-grid,.ticket-grid{grid-template-columns:1fr}}
+.empty{border:2px dashed var(--line);border-radius:12px;padding:20px;color:var(--muted);background:transparent;margin-top:16px}
+.stadium-list p{margin:0 0 10px;list-style:none}
+.stadium-list p:last-child{margin-bottom:0}
+ul.clean{margin:8px 0 0;padding-left:20px}
+ul.clean li{margin:4px 0}
+.wx{background:var(--navy);color:#FFFFFF;border-radius:16px;padding:22px 22px 18px;margin-top:16px}
+.wx-top{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.wx-icon svg{width:72px;height:72px;display:block}
+.wx-temp{font-family:var(--display);font-weight:800;font-size:clamp(46px,8vw,64px);line-height:1}
+.wx-temp small{display:block;font-family:var(--body);font-weight:500;font-size:15px;line-height:1.35;margin-top:8px;max-width:34ch}
+.wx-line{font-size:18px;line-height:1.5;margin:16px 0 0}
+.wx-kick{margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.18)}
+.wx-kick span,.wx-stats span{display:block;font-family:var(--display);text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:600;color:#F37021}
+.wx-kick strong{display:block;font-size:20px;font-weight:600;margin-top:2px}
+.wx-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:16px}
+.wx-stats div{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px 12px}
+.wx-stats strong{display:block;font-weight:600;font-size:15px;margin-top:2px}
+.wx-tag{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-weight:800;font-size:20px;line-height:1.1;margin:16px 0 0}
+.wx-tag em{font-style:normal;color:#F37021}
+.wx-note{font-size:12px;color:rgba(255,255,255,.75);margin:12px 0 0}
+.jump{position:relative;display:inline-block;margin:20px 0 8px}
+.jump summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;background:#0064B5;color:#FFFFFF;border:1.5px solid #0A2343;border-radius:4px;padding:10px 16px;font-size:14px;font-weight:500;font-family:var(--body)}
+.jump summary::-webkit-details-marker{display:none}
+.jump summary::after{content:"\25BE";font-size:12px}
+.jump summary:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.jump-menu{position:absolute;top:calc(100% + 6px);left:0;z-index:5;min-width:260px;background:#FFFFFF;border:1.5px solid #FC4C02;border-radius:4px;padding:6px;display:flex;flex-direction:column}
+.jump-menu a{padding:8px 12px;color:#0A2343;text-decoration:none;font-size:14px;border-radius:4px;font-family:var(--body)}
+.jump-menu a:hover,.jump-menu a:focus-visible{background:#F0F4F8}
+.totop{position:fixed;right:16px;bottom:16px;z-index:10;font-family:var(--body);font-weight:600;font-size:14px;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;background:#0A2343;color:#FFFFFF;border-radius:3px;padding:10px 14px;box-shadow:0 4px 14px rgba(10,35,67,.25)}
+.totop:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+footer{margin-top:44px;color:var(--muted);font-size:14px;border-top:1px solid var(--line);padding-top:14px}
+</style>
+</head>
+<body>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="eyebrow">Sunday, Nov. 1, 2026 • 2:25 PM MT Kickoff</div>
+    <h1>Know Before You Go<br><em>Broncos vs Chiefs</em></h1>
+    <p>Broncos Week 8 @ Empower Field at Mile High</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <details class="jump">
+    <summary>Jump to section</summary>
+    <nav class="jump-menu" aria-label="Sections">
+      <a href="#run-of-show">Schedule</a>
+      <a href="#legacy-lounge">Legacy Lounge</a>
+      <a href="#gameday-events">Game Day Highlights</a>
+      <a href="#mobile-ticketing">Mobile ticketing</a>
+      <a href="#rideshare">The Orange Crush Hour</a>
+      <a href="#stadium">Stadium</a>
+    </nav>
+  </details>
+
+  <section id="who-to-call">
+    <h2>Who to call</h2>
+    <div class="panel">
+      <div class="label">Point of contact</div>
+      <div class="value" style="margin-top:8px">On game day, please call or text <strong>Forrest Sewell</strong> at <a href="tel:+19188052927">918-805-2927</a> if you have any questions.</div>
+    </div>
+  </section>
+
+  <section id="game-time-temps">
+    <h2>Blitz Forecast</h2>
+    <div class="wx">
+      <div class="wx-top">
+        <div class="wx-icon" aria-hidden="true">
+          <svg viewBox="0 0 96 96" fill="none">
+            <circle cx="70" cy="24" r="11" fill="#F37021"/>
+            <g fill="#FFFFFF">
+              <rect x="20" y="52" width="52" height="18" rx="9"/>
+              <circle cx="34" cy="50" r="13"/>
+              <circle cx="54" cy="42" r="18"/>
+              <circle cx="70" cy="54" r="10"/>
+            </g>
+          </svg>
+        </div>
+        <div class="wx-temp">
+          61°F
+          <small>High on Sunday, overnight low around 46°F</small>
+        </div>
+      </div>
+      <p class="wx-line">Mostly cloudy and mild through kickoff. Light NNE winds and almost no chance of rain.</p>
+      <div class="wx-kick">
+        <span>At kickoff, 2 PM</span>
+        <strong>59°F, feels like 58°F</strong>
+      </div>
+      <div class="wx-stats">
+        <div><span>Conditions</span><strong>Mostly cloudy</strong></div>
+        <div><span>Winds</span><strong>6 mph NNE</strong></div>
+        <div><span>Precipitation</span><strong>0% at kickoff</strong></div>
+        <div><span>Daytime chance</span><strong>5% all day</strong></div>
+      </div>
+      <p class="wx-tag">Bring a layer. <em>It's mild, not cold.</em></p>
+      <p class="wx-note">Source: Weather Underground, downtown Denver (80201), hourly forecast for Sunday, Nov. 1, 2026. Point forecast, not stadium-specific.</p>
+    </div>
+  </section>
+
+  <section id="run-of-show">
+    <h2>Schedule</h2>
+    <div class="panel tablewrap">
+      <table>
+        <thead><tr><th>Time (MT)</th><th>What happens</th></tr></thead>
+        <tbody>
+          <tr><td class="time">9:00 AM</td><td>Ticket office opens.</td></tr>
+          <tr><td class="time">10:00 AM</td><td>All parking lots open. Ford F-150 (Lot C) opens at 8:00 AM.</td></tr>
+          <tr><td class="time">11:25 AM</td><td>Legacy Lounge opens. VIP Tailgate in Lot J opens.</td></tr>
+          <tr><td class="time">11:30 AM</td><td>Mane St. opens, free, between Gates 9 &amp; 10.</td></tr>
+          <tr><td class="time">11:30 AM</td><td>Premium Gates 2 &amp; 7 open.</td></tr>
+          <tr><td class="time">12:30 PM</td><td>All gates open.</td></tr>
+          <tr><td class="time">2:05 PM</td><td>Climb to Kickoff.</td></tr>
+          <tr><td class="time">2:25 PM</td><td>Kickoff vs. Kansas City Chiefs.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="legacy-lounge">
+    <h2>Legacy Lounge</h2>
+    <div class="panel">
+      <p style="margin:0">The Legacy Lounge at Empower Field at Mile High (Denver Broncos) is an exclusive, full-season club offering designed for game days.</p>
+    </div>
+    <div class="grid">
+      <div class="panel">
+        <div class="label">Where to go</div>
+        <p style="margin:10px 0 0">For Denver Broncos home games, the Legacy Lounge opens three hours prior to kickoff, which is 11:25 AM for this game.</p>
+        <p style="margin:12px 0 0">Legacy Lounge ticket holders have early access through Premium Gates 2 and 7.</p>
+      </div>
+      <div class="panel">
+        <div class="label">What's included</div>
+        <p style="margin:10px 0 0"><strong>All-inclusive amenities:</strong> all-inclusive food and beverages, plush reception seating, a custom bar, fireplaces, TV monitors, and custom artwork celebrating Broncos history, such as the high school helmet wall and alumni and former player visits.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="gameday-events">
+    <h2>Game Day Highlights</h2>
+    <div class="panel">
+      <div class="stadium-list">
+        <p><strong>Week 8:</strong> ¡Vamos Broncos! weekend, celebrating Hispanic Heritage Month and the cultures and traditions of Broncos Country.</p>
+        <p><strong>Anthem:</strong> Isabel Gonzalez, starring in <em>Buena Vista Social Club</em>, presented by the Denver Center for the Performing Arts.</p>
+        <p><strong>Flyover:</strong> the Emerald Knights of the 308th Fighter Squadron, Luke AFB, flying the F-35 Lightning.</p>
+        <p><strong>Pregame at Mane St.:</strong> Thunder Meet &amp; Greet 11:45 AM to 12:15 PM near the Southeast Tunnel. Mile High Lucha Libre 12:00 to 1:15 PM, south of Mane St. Broncos legend Philip Lindsay meets fans 12:00 to 1:00 PM at the Monarch tent near the south entrance. CBS Pregame Show 9:30 to 11:00 AM.</p>
+        <p><strong>Food:</strong> Mister Oso adds a new crunchy-shell beef taco for the week, on the main concourse and in Club Level. Latino-owned food trucks at Mane St.: Arepas CO, El Guanajuato, La Jugla, and La Salvadoreña.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="mobile-ticketing">
+    <h2>Mobile ticketing</h2>
+    <div class="grid steps-grid">
+      <div class="panel">
+        <div class="label">Step 1</div>
+        <p class="note" style="margin:0 0 6px">Before game day</p>
+        <div class="value">Install and update the <a href="https://www.denverbroncos.com/mobile-app/" target="_blank" rel="noopener">Denver Broncos app</a> and the Ticketmaster app</div>
+      </div>
+      <div class="panel">
+        <div class="label">Step 2</div>
+        <div class="value">Log in to each app with the same email address</div>
+      </div>
+      <div class="panel">
+        <div class="label">Step 3</div>
+        <div class="value">Accept the tickets as soon as they're sent and add them to your phone's mobile wallet</div>
+        <p class="note">WiFi at the stadium is unreliable on game day.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="rideshare">
+    <h2>The Orange Crush Hour: Avoiding the Commuter Rush</h2>
+    <div class="panel">
+      <div class="label">Traffic by arrival time</div>
+      <table>
+        <thead><tr><th>Arrival window</th><th>Traffic</th><th>Relative to kickoff</th></tr></thead>
+        <tbody>
+          <tr><td class="time">Before 12:25 PM</td><td>Minimum</td><td>2+ hours before kickoff</td></tr>
+          <tr><td class="time">12:25 to 1:25 PM</td><td>Moderate</td><td>1 to 2 hours before kickoff</td></tr>
+          <tr><td class="time">After 1:25 PM</td><td>Heavy</td><td>Under 1 hour before kickoff</td></tr>
+        </tbody>
+      </table>
+      <p class="note">These are estimates based on typical gameday traffic and current conditions, not a guarantee. Build in extra time and check live conditions before you go. All times are Mountain Time.</p>
+    </div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:16px">
+      <div class="panel">
+        <div class="label">Rideshare</div>
+        <p style="margin:10px 0 0"><strong>Arrival</strong><br>Drop-off is at the northeast corner of the stadium near Gate 5 on Mile High Stadium Circle.</p>
+        <p style="margin:12px 0 0"><strong>Departure</strong><br>Pickups are at the Ball Arena Rideshare Lot on 5th &amp; Walnut, about a 15-minute walk from the stadium.</p>
+      </div>
+      <div class="panel">
+        <div class="label">Parking Lots</div>
+        <p style="margin:10px 0 0"><strong>New lot names, same gameday routine</strong><br>A few lots carry partner names this season. The lot letters have not changed.</p>
+        <ul class="clean">
+          <li>Ford Super Duty (Lot A)</li>
+          <li>Ford Bronco (Lot B)</li>
+          <li>Ford F-150 (Lot C)</li>
+          <li>SRM Concrete (Lot G)</li>
+          <li>SRM Concrete (Lot I)</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <div class="label">Light Rail &amp; Bus</div>
+        <div class="stadium-list" style="margin-top:12px">
+          <p>The C, E, and W lines stop at Empower Field at Mile High Station, about a 15-minute walk from Gate 8.</p>
+          <p>Buy your return fare before the game to skip the postgame line.</p>
+          <p><a href="https://www.rtd-denver.com/" target="_blank" rel="noopener">RTD schedules and fares</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="stadium">
+    <h2>Stadium</h2>
+    <div class="panel">
+      <div class="stadium-list">
+        <p><a href="https://www.empowerfieldatmilehigh.com/plan-your-visit/ada-guide" target="_blank" rel="noopener">ADA Guide</a></p>
+        <p><a href="https://denverbroncos.io-media.com/web/index.html" target="_blank" rel="noopener">Seating Map</a></p>
+        <p><strong>Bag Policy:</strong> Small bags up to 4.5 × 6.5" or clear bags up to 12 × 6 × 12" and one-gallon clear resealable bags are permitted. Backpacks, larger purses, coolers, briefcases, camera bags, and seat cushions are not allowed. <a href="https://www.empowerfieldatmilehigh.com/clear-bag-policy-1" target="_blank" rel="noopener">Clear bag policy</a></p>
+        <p><strong>Cashless stadium:</strong> Cards and contactless payment only.</p>
+        <p><strong>Re-entry:</strong> not permitted with a previously scanned ticket.</p>
+        <p><a href="https://www.empowerfieldatmilehigh.com/plan-your-visit/directions-parking/broncos/" target="_blank" rel="noopener">Parking and directions</a></p>
+        <p><a href="https://www.empowerfieldatmilehigh.com/plan-your-visit/fan-code-of-conduct" target="_blank" rel="noopener">Fan code of conduct</a></p>
+        <p><a href="https://www.empowerfieldatmilehigh.com/assets/doc/tailgating-fancodeofconduct-rules-fdc0ca24cc.pdf" target="_blank" rel="noopener">Tailgating rules</a></p>
+      </div>
+    </div>
+  </section>
+</main>
+<a class="totop" href="#top" aria-label="Back to top">Top</a>
+</body>
+</html>
+
+</body></html>
