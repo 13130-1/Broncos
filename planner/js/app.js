@@ -447,9 +447,12 @@
       label = sec.name;
     } else {
       const d = D.parse(u.date);
-      bg = Layouts.render(u.view, d, p);
-      key = contentKey(p, D.key(u.view, d));
-      label = D.label(u.view, d);
+      if (u.view === 'week' && isLand(p) && u.weekPage === 'preview2') u.weekPage = 'preview';
+      const wp = u.view === 'week' ? u.weekPage : null;
+      const preview = wp === 'preview' || wp === 'preview2';
+      bg = Layouts.render(u.view, d, p, { weekPage: wp });
+      key = contentKey(p, preview ? (wp === 'preview2' ? 'weekpreview2:' : 'weekpreview:') + D.iso(D.startOfWeek(d)) : D.key(u.view, d));
+      label = (preview ? (isLand(p) ? 'Weekly preview · ' : `Weekly preview ${wp === 'preview2' ? 2 : 1}/2 · `) : '') + D.label(u.view, d);
     }
     $('#periodLabel').textContent = label;
     $('#goDate').value = u.date;
@@ -492,7 +495,10 @@
           <button data-f="clear">Clear</button>
         </div>`;
     } else {
-      f.innerHTML = `<span class="hint">${u.view === 'day' || u.view === 'week' || u.view === 'month' ? 'Double-click a day or time to add an event · ' : ''}Swipe or press ← → to turn pages</span>
+      const weekSeg = u.view === 'week' ? `<div class="seg week-seg" role="group" aria-label="Week pages">
+          <button data-f="wk-preview" aria-pressed="${u.weekPage === 'preview' || u.weekPage === 'preview2'}">Weekly preview</button>
+          <button data-f="wk-days" aria-pressed="${u.weekPage !== 'preview' && u.weekPage !== 'preview2'}">7-day view</button></div>` : '';
+      f.innerHTML = weekSeg + `<span class="hint">${u.view === 'day' || (u.view === 'week' && !String(u.weekPage).startsWith('preview')) || u.view === 'month' ? 'Double-click a day or time to add an event · ' : ''}Swipe or press ← → to turn pages</span>
         <div class="foot-actions"><button data-f="clear">Clear page</button></div>`;
     }
   }
@@ -504,6 +510,12 @@
       if (ni < 0) { toast('This is the first page'); return; }
       if (ni >= sec.pages.length) { toast('Last page. Use “+ Page” to add another.'); return; }
       u.pages[sec.id] = ni;
+    } else if (u.view === 'week') {
+      // Pages run: weekly preview (two pages in portrait), 7-day view, then next week's preview
+      const seq = isLand(planner()) ? ['preview', 'days'] : ['preview', 'preview2', 'days'];
+      const i = Math.max(0, seq.indexOf(u.weekPage || 'days')) + dir;
+      if (i >= 0 && i < seq.length) u.weekPage = seq[i];
+      else { u.date = D.iso(D.shift('week', D.parse(u.date), dir)); u.weekPage = dir > 0 ? seq[0] : seq[seq.length - 1]; }
     } else {
       u.date = D.iso(D.shift(u.view, D.parse(u.date), dir));
     }
@@ -517,6 +529,8 @@
   }
   function goToView(view, date) {
     const p = planner(), u = ui();
+    if (view === 'weekpreview') { view = 'week'; u.weekPage = 'preview'; }
+    else if (view === 'week') u.weekPage = 'days';
     let target = view;
     if (!p.views.includes(view)) {
       const i = FINE_TO_COARSE.indexOf(view);
@@ -535,6 +549,7 @@
 
   async function footerAction(a) {
     const p = planner(), u = ui(), sec = currentSection();
+    if (a === 'wk-preview' || a === 'wk-days') { u.weekPage = a === 'wk-preview' ? 'preview' : 'days'; saveUI(); renderPlanner(); return; }
     if (a === 'prev') step(-1);
     if (a === 'next') step(1);
     if (a === 'clear') {

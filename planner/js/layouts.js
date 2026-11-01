@@ -132,31 +132,137 @@
     return S.wrap(s);
   }
 
-  /* ---------- Week ---------- */
-  function week(date) {
+  /* ---------- Week: 7-day view ----------
+   * Two "pages" side by side: Mon/Tue/Wed on the left, Thu/Fri and Sat|Sun on the right.
+   * Each day is a framed box with its name set into the top rule. */
+  function frameLabel(x, y, w, label) {
+    const tw = label.length * 11 + 28;
+    return `<rect x="${x + w / 2 - tw / 2}" y="${y - 12}" width="${tw}" height="24" class="paper"/>` +
+      S.text(x + w / 2, y + 5, label, 't-day-label', 'text-anchor="middle"');
+  }
+  const gutter = () => (LAND ? `<rect x="688" y="0" width="24" height="1000" class="gutter"/>` + S.line(700, 0, 700, 1000, 'ln-faint') : '');
+  const pages = () => (LAND ? [[90, 640], [760, 1310]] : [[60, 480], [520, 940]]);
+
+  function week(date, planner, opts) {
+    if (opts && (opts.weekPage === 'preview' || opts.weekPage === 'preview2')) return weekPreview(date, opts.weekPage === 'preview2');
     const start = D.startOfWeek(date), today = D.today();
-    const g = LAND ? { cols: 4, bw: 308, bh: 402, gx: 16, gy: 12, top: 150, maxEv: 7 }
-      : { cols: 2, bw: 430, bh: 290, gx: 20, gy: 8, top: 160, maxEv: 4 };
-    let s = S.header(`Week of ${D.MON_SHORT[start.getMonth()]} ${start.getDate()}`) +
-      link('month', start, D.label('month', start), S.text(R, 105, `${D.label('month', start)} ›`, 't-link', 'text-anchor="end"'));
-    const { bw, bh } = g;
-    for (let i = 0; i < 8; i++) {
-      const x = L + (i % g.cols) * (bw + g.gx), y = g.top + Math.floor(i / g.cols) * (bh + g.gy);
-      if (i === 7) {
-        s += S.rect(x, y, bw, bh, 'box', 12) + S.h(x + 18, y + 36, 'Notes') + S.lines(x + 18, y + 80, bw - 36, y + bh - 15, 38);
-        continue;
-      }
+    const [lp, rp] = pages();
+    const top = LAND ? 90 : 100, bottom = LAND ? 950 : 1350, rh = (bottom - top) / 3;
+    let s = gutter() +
+      S.text(lp[0], 52, D.label('week', start).toUpperCase(), 't-th') +
+      link('month', start, D.label('month', start), S.text(rp[1] - 230, 52, `${D.MONTHS[start.getMonth()].toUpperCase()} ›`, 't-th', 'text-anchor="end"')) +
+      link('weekpreview', start, 'Weekly preview', S.text(rp[1], 52, 'WEEKLY PREVIEW ›', 't-th', 'text-anchor="end"'));
+    const lw = lp[1] - lp[0], rw = rp[1] - rp[0];
+    const boxes = [
+      [lp[0], top, lw, rh], [lp[0], top + rh, lw, rh], [lp[0], top + 2 * rh, lw, rh],
+      [rp[0], top, rw, rh], [rp[0], top + rh, rw, rh], [rp[0], top + 2 * rh, rw / 2, rh], [rp[0] + rw / 2, top + 2 * rh, rw / 2, rh],
+    ];
+    boxes.forEach(([x, y, w, h], i) => {
       const d = D.addDays(start, i);
-      s += `<rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="12" class="box${D.sameDay(d, today) ? ' cell-today' : ''}" data-newevent="${D.iso(d)}"/>`;
-      s += link('day', d, D.label('day', d), S.text(x + 18, y + 38, (LAND ? D.DOW_SHORT[d.getDay()] : D.DOW[d.getDay()]).toUpperCase(), 't-h') + S.text(x + bw - 18, y + 40, d.getDate(), 't-day-lg', 'text-anchor="end"'));
-      const evs = Store.eventsOn(d);
-      const shown = evs.slice(0, g.maxEv);
-      shown.forEach((ev, k) => { s += evChip(ev, x + 14, y + 56 + k * 32, bw - 28, 28); });
-      if (evs.length > g.maxEv) s += link('day', d, 'More events', S.text(x + 18, y + 56 + g.maxEv * 32 + 16, `+${evs.length - g.maxEv} more`, 't-xs'), false);
-      const ly = y + 70 + shown.length * 32 + (evs.length > g.maxEv ? 20 : 0);
-      s += S.lines(x + 18, Math.max(ly, y + 80), bw - 36, y + bh - 15, 38);
-    }
+      s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="frame${D.sameDay(d, today) ? ' cell-today' : ''}" data-newevent="${D.iso(d)}"/>`;
+    });
+    boxes.forEach(([x, y, w, h], i) => {
+      const d = D.addDays(start, i);
+      s += link('day', d, D.label('day', d), frameLabel(x, y, w, D.DOW[d.getDay()].toUpperCase()));
+      s += link('day', d, D.label('day', d), S.text(x + w - 14, y + 34, d.getDate(), 't-day', 'text-anchor="end"'));
+      const evs = Store.eventsOn(d), max = Math.max(1, Math.floor((h - 60) / 32));
+      evs.slice(0, max).forEach((ev, k) => { s += evChip(ev, x + 14, y + 22 + k * 32 + (k === 0 ? 0 : 0), w - 64, 28); });
+      if (evs.length > max) s += link('day', d, 'More events', S.text(x + 16, y + h - 14, `+${evs.length - max} more`, 't-xs'), false);
+    });
     return S.wrap(s);
+  }
+
+  /* ---------- Week: weekly preview ----------
+   * Left page: weeks-left countdown, title, review of last week.
+   * Right page: reviews, habit streaks, rejuvenation, overview, top 3 for the week. */
+  function label(x, y, title, instr) {
+    return `<text x="${x}" y="${y}"><tspan class="t-h">${esc(title.toUpperCase())}</tspan>` +
+      (instr ? `<tspan class="t-instr" dx="14">${esc(instr)}</tspan>` : '') + '</text>';
+  }
+  function circleOpts(x, y, items) {
+    let s = '', cx = x;
+    items.forEach(t => {
+      s += S.circle(cx + 7, y - 5, 7) + S.text(cx + 22, y, t.toUpperCase(), 't-th');
+      cx += 22 + t.length * 9.6 + 26;
+    });
+    return s;
+  }
+  function weeksLeft(date) {
+    const start = D.startOfWeek(date);
+    const qs = new Date(date.getFullYear(), (D.quarter(date) - 1) * 3, 1);
+    const idx = Math.round((start - D.startOfWeek(qs)) / 6048e5);
+    return Math.max(0, Math.min(13, 13 - idx));
+  }
+  function previewLeft(x, w, top, date, n) {
+    const left = weeksLeft(date);
+    let s = S.text(x, top, 'WEEKS IN QUARTER', 't-th');
+    for (let k = 13, i = 0; k >= 0; k--, i++) {
+      const cx = x + 175 + i * 26;
+      if (k === left) s += S.circle(cx, top - 4, 11, 'wk-on');
+      s += S.text(cx, top + 1, k, k === left ? 't-wk on' : 't-wk', 'text-anchor="middle"');
+    }
+    let y = top + 68;
+    s += S.text(x, y, 'WEEKLY PREVIEW', 't-display');
+    y += 70;
+    s += label(x, y, 'After-action review', 'List 3–5 wins from the past week.');
+    s += S.lines(x, y + 46, w, y + 46 + (n.wins - 1) * n.gap, n.gap);
+    y += 46 + (n.wins - 1) * n.gap + n.sg;
+    s += S.text(x, y, 'How far did you get on last week’s Top 3?', 't-instr') + S.text(x + w - 30, y + 6, '%', 't-th', 'text-anchor="middle"');
+    for (let i = 1; i <= 3; i++) {
+      const ly = y + 14 + i * n.gap;
+      s += S.text(x, ly - 10, i, 't-xs') + S.line(x, ly, x + w, ly);
+    }
+    s += S.line(x + w - 64, y + 12, x + w - 64, y + 14 + 3 * n.gap, 'ln');
+    y += 14 + 3 * n.gap + n.sg + 4;
+    s += S.text(x, y, 'What worked? What didn’t? Why?', 't-instr') + S.lines(x, y + 44, w, y + 44 + (n.worked - 1) * n.gap, n.gap);
+    y += 44 + (n.worked - 1) * n.gap + n.sg + 4;
+    s += S.text(x, y, 'What will you keep doing, or change?', 't-instr') + S.lines(x, y + 44, w, y + 44 + (n.change - 1) * n.gap, n.gap);
+    return s;
+  }
+  function previewRight(x, w, top, date, n) {
+    const start = D.startOfWeek(date);
+    let y = top;
+    let s = label(x, y, 'Goal review & list sweep', 'Review goals, lists and notes.');
+    s += circleOpts(x, y + 42, ['Goals', 'Delegated items', 'Notes', 'Task list']);
+    y += 42 + n.sec;
+    s += label(x, y, 'Habit streaks', 'Track your habit goals.');
+    const c = n.cell, gx = x + w - 7 * c, gy = y + 24;
+    s += S.lines(x, gy + 4 + c, gx - 24 - x, gy + 4 + 5 * c, c);
+    for (let r = 0; r < 5; r++) for (let k = 0; k < 7; k++) {
+      s += S.rect(gx + k * c, gy + 4 + r * c, c, c, 'box') + S.text(gx + k * c + c / 2, gy + 9 + r * c + c / 2, k + 1, 't-xs', 'text-anchor="middle"');
+    }
+    y = gy + 4 + 5 * c + n.sec - 10;
+    s += label(x, y, 'Rejuvenation', 'Choose 3 ways to recharge this week:');
+    s += S.text(x, y + 28, 'sleep, eat, move, connect or rest better — then schedule them.', 't-instr');
+    const by = y + 52, bh = n.boxH;
+    s += S.line(x, by, x + w, by) + S.line(x, by + bh, x + w, by + bh);
+    for (let i = 0; i < 3; i++) {
+      const bx = x + i * w / 3;
+      if (i) s += S.line(bx, by, bx, by + bh);
+      s += S.text(bx + 14, by + 26, i + 1, 't-xs');
+    }
+    y = by + bh + n.sec - 10;
+    s += label(x, y, 'Weekly overview', 'Plan the week ahead on the 7-day view.');
+    s += circleOpts(x, y + 42, ['Events', 'Projects', 'Tasks', 'Other commitments']);
+    y += 42 + n.sec;
+    s += label(x, y, 'Top 3 for the week', 'Choose three objectives for the week.');
+    for (let i = 0; i < 3; i++) {
+      const cy = y + 50 + i * n.top3;
+      s += S.circle(x + 18, cy, 17, 'big-check') + S.line(x + 52, cy - 16, x + w, cy - 16) + S.line(x + 52, cy + 14, x + w, cy + 14);
+    }
+    s += link('week', start, '7-day view', S.text(x + w, top - 52, '7-DAY VIEW ›', 't-th', 'text-anchor="end"'));
+    return s;
+  }
+  function weekPreview(date, second) {
+    if (LAND) {
+      return S.wrap(gutter() +
+        previewLeft(110, 520, 90, date, { wins: 5, worked: 4, change: 4, gap: 30, sg: 50 }) +
+        previewRight(770, 550, 120, date, { sec: 70, boxH: 110, top3: 48, cell: 26 }));
+    }
+    // Portrait: two pages, like the printed spread
+    return S.wrap(second
+      ? previewRight(80, 840, 130, date, { sec: 100, boxH: 200, top3: 70, cell: 34 })
+      : previewLeft(80, 840, 90, date, { wins: 5, worked: 7, change: 7, gap: 38, sg: 60 }));
   }
 
   /* ---------- Day ---------- */
@@ -257,11 +363,11 @@
 
   const Layouts = { multiyear, year, quarter, month, week, day };
   window.Layouts = {
-    render(view, date, planner) {
+    render(view, date, planner, opts) {
       const orientation = (planner && planner.orientation) || 'portrait';
       const G = Templates.geom(orientation);
       LAND = orientation === 'landscape'; R = G.R; BOTTOM = G.H - 40;
-      try { return (Layouts[view] || Layouts.day)(date, planner); }
+      try { return (Layouts[view] || Layouts.day)(date, planner, opts); }
       finally { Templates.geom('portrait'); LAND = false; R = 940; BOTTOM = 1360; }
     },
   };

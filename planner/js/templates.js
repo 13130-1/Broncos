@@ -28,14 +28,14 @@
       let s = '';
       for (let i = 0; i < n; i++) {
         const y = y0 + i * gap;
-        s += S.rect(x, y - 20, 20, 20, 'box', 4) + S.line(x + 34, y, x + w, y);
+        s += S.circle(x + 10, y - 9, 10) + S.line(x + 34, y, x + w, y);
       }
       return s;
     },
     header(title, sub) {
       return S.text(L, 105, title, 't-title') +
         (sub ? S.text(G.R, 105, sub, 't-s', 'text-anchor="end"') : '') +
-        S.line(L, 132, G.R, 132, 'ln-strong');
+        S.line(L, 132, G.R, 132, 'ln');
     },
     h(x, y, s) { return S.text(x, y, s.toUpperCase(), 't-h'); },
     field(x, y, w, label) {
