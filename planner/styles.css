@@ -228,6 +228,8 @@ label.ctl { border: none; padding: 0 4px; }
 .t-mini-day { font-size: 15px; }
 .t-mini-day.today { fill: var(--paper) !important; font-weight: 600; }
 .t-q { font-size: 15px; font-weight: 600; letter-spacing: .2em; fill: var(--muted) !important; }
+.t-grid { font-size: 11px; fill: var(--muted) !important; }
+.t-grid.b { font-weight: 600; fill: var(--ink) !important; }
 .t-wk { font-size: 12px; font-weight: 600; fill: var(--muted) !important; }
 .t-wk.on { fill: var(--paper) !important; }
 .wk-on { fill: var(--ink); stroke: none; }

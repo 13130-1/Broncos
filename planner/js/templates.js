@@ -38,6 +38,10 @@
         S.line(L, 132, G.R, 132, 'ln');
     },
     h(x, y, s) { return S.text(x, y, s.toUpperCase(), 't-h'); },
+    label(x, y, title, instr) {
+      return `<text x="${x}" y="${y}"><tspan class="t-h">${esc(title.toUpperCase())}</tspan>` +
+        (instr ? `<tspan class="t-instr" dx="14">${esc(instr)}</tspan>` : '') + '</text>';
+    },
     field(x, y, w, label) {
       const lw = label.length * 10 + 16;
       return S.text(x, y, label, 't-s') + S.line(x + lw, y + 4, x + w, y + 4);
@@ -109,16 +113,37 @@
       },
     },
     goals: {
-      name: 'Goal planner', cat: 'Productivity',
+      name: 'Goal detail', cat: 'Productivity',
       draw: () => {
-        let s = S.header('Goals');
-        [0, 1, 2].forEach(i => {
-          const y = 190 + i * 390;
-          s += S.rect(L, y - 30, R - L, 360, 'box', 12) + S.field(L + 20, y + 10, 840, `Goal ${i + 1}`) +
-            S.text(L + 20, y + 60, 'Why it matters', 't-s') + S.lines(L + 20, y + 95, 840, y + 135, 40) +
-            S.text(L + 20, y + 180, 'Steps', 't-s') + S.checks(L + 20, y + 220, 520, 3, 44) +
-            S.field(600, y + 220, 300, 'Deadline');
+        const x0 = 70, x1 = 930, w = x1 - x0;
+        const opt = (x, y, t) => S.circle(x + 7, y - 5, 7) + S.text(x + 22, y, t.toUpperCase(), 't-th');
+        // Rank/number column table: top rule, rows, and a narrow left column
+        const table = (y, rows, gap) => S.lines(x0, y, w, y + rows * gap, gap) + S.line(x0 + 46, y, x0 + 46, y + rows * gap);
+        let s = S.text(x0, 122, 'GOAL DETAIL', 't-display');
+        // Life areas, three columns of three
+        [['Body', 'Mind', 'Spirit'], ['Love', 'Family', 'Community'], ['Money', 'Work', 'Hobbies']].forEach((col, c) => {
+          col.forEach((t, r) => { s += opt(565 + c * 125, 90 + r * 28, t); });
         });
+        s += S.label(x0, 215, 'Goal statement', 'Write a specific, measurable goal with a deadline.');
+        s += S.lines(x0, 258, w, 342, 42);
+        s += opt(x1 - 345, 380, 'Achievement goal') + opt(x1 - 130, 380, 'Habit goal');
+        s += S.label(x0, 438, 'Key motivations', 'Write your reasons, then rank them.') + table(464, 5, 40);
+        s += S.label(x0, 728, 'Next steps', 'List the first projects or tasks toward your goal.') + table(754, 5, 40);
+        s += S.label(x0, 1018, 'Celebration', 'Decide how you’ll celebrate when you get there.') + S.lines(x0, 1058, w, 1098, 40);
+        s += S.label(x0, 1152, 'Goal progress', 'Track an achievement goal.');
+        s += S.line(x0, 1192, x1, 1192);
+        for (let k = 0; k <= 4; k++) s += S.line(x0 + k * w / 4, 1182, x0 + k * w / 4, 1192);
+        s += S.text(x0, 1212, '0%', 't-xs') + S.text(x1, 1212, '100%', 't-xs', 'text-anchor="end"');
+        s += S.label(x0, 1262, 'Habit streaks', 'Track a habit goal, one row per month of the quarter.');
+        const gy = 1280, rh = 26, lw = 40, cw = (w - lw) / 31;
+        for (let r = 0; r < 3; r++) {
+          const y = gy + r * rh;
+          s += S.rect(x0, y, lw, rh, 'fill-soft') + S.text(x0 + lw / 2, y + 18, 'M' + (r + 1), 't-grid b', 'text-anchor="middle"');
+          for (let d = 0; d < 31; d++) s += S.text(x0 + lw + d * cw + cw / 2, y + 18, d + 1, 't-grid', 'text-anchor="middle"');
+        }
+        for (let r = 0; r <= 3; r++) s += S.line(x0, gy + r * rh, x1, gy + r * rh, 'ln');
+        for (let d = 0; d <= 31; d++) s += S.line(x0 + lw + d * cw, gy, x0 + lw + d * cw, gy + 3 * rh, 'ln-faint');
+        s += S.line(x0, gy, x0, gy + 3 * rh, 'ln') + S.line(x1, gy, x1, gy + 3 * rh, 'ln');
         return s;
       },
     },
