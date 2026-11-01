@@ -187,7 +187,10 @@
         const [pid, pageKey] = k.split('|');
         if (pid !== src.id) continue;
         let nk = pageKey;
-        if (pageKey.startsWith('page:')) nk = 'page:' + (pageMap[pageKey.slice(5)] || pageKey.slice(5));
+        if (pageKey.startsWith('page:')) {
+          const [pgId, suffix] = pageKey.slice(5).split('@');
+          nk = 'page:' + (pageMap[pgId] || pgId) + (suffix ? '@' + suffix : '');
+        }
         state.content[copy.id + '|' + nk] = JSON.parse(JSON.stringify(v));
       }
       Store.touch();

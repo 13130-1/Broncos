@@ -3,6 +3,13 @@
  * CSS variables set by the planner's paper theme, so one template works in every theme. */
 (function () {
   const W = 1000, H = 1400, L = 60, R = 940;
+  /* Current page geometry. Portrait is 1000 x 1400, landscape is 1400 x 1000. */
+  const G = { W: 1000, H: 1400, R: 940 };
+  function geom(orientation) {
+    const land = orientation === 'landscape';
+    G.W = land ? 1400 : 1000; G.H = land ? 1000 : 1400; G.R = G.W - 60;
+    return G;
+  }
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   /* ---------- SVG drawing helpers ---------- */
@@ -27,8 +34,8 @@
     },
     header(title, sub) {
       return S.text(L, 105, title, 't-title') +
-        (sub ? S.text(R, 105, sub, 't-s', 'text-anchor="end"') : '') +
-        S.line(L, 132, R, 132, 'ln-strong');
+        (sub ? S.text(G.R, 105, sub, 't-s', 'text-anchor="end"') : '') +
+        S.line(L, 132, G.R, 132, 'ln-strong');
     },
     h(x, y, s) { return S.text(x, y, s.toUpperCase(), 't-h'); },
     field(x, y, w, label) {
@@ -64,7 +71,7 @@
       return s;
     },
     wrap(inner, extraClass = '') {
-      return `<svg class="page-svg ${extraClass}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" aria-hidden="false">${inner}</svg>`;
+      return `<svg class="page-svg ${extraClass}" viewBox="0 0 ${G.W} ${G.H}" xmlns="http://www.w3.org/2000/svg" aria-hidden="false">${inner}</svg>`;
     },
   };
 
@@ -273,10 +280,32 @@
 
   const CATEGORIES = ['Productivity', 'Professional', 'Education', 'Lifestyle', 'Creative'];
 
-  function renderPageTemplate(id) {
+  /* Plain papers redraw edge to edge in landscape. */
+  const LANDSCAPE_NATIVE = {
+    lined: () => S.lines(L, 120, 1280, 960, 40) + S.line(130, 50, 130, 975, 'ln-accent'),
+    dot: () => S.dots(60, 60, 1280, 880, 40),
+    graph: () => S.gridLines(60, 60, 1280, 880, 40),
+    blank: () => '',
+    sketch: () => S.rect(L, 50, 1280, 860, 'box', 8) + S.field(L, 960, 700, 'Title') + S.field(900, 960, 440, 'Date'),
+  };
+
+  function renderPageTemplate(id, orientation) {
     const t = PAGE_TEMPLATES[id] || PAGE_TEMPLATES.blank;
-    return S.wrap(t.draw());
+    if (orientation !== 'landscape') { geom('portrait'); return S.wrap(t.draw()); }
+    if (LANDSCAPE_NATIVE[id]) {
+      geom('landscape');
+      const out = S.wrap(LANDSCAPE_NATIVE[id]());
+      geom('portrait');
+      return out;
+    }
+    // Structured templates become a two-page spread, like an open paper planner.
+    geom('portrait');
+    const inner = t.draw(), k = 0.7, y = (1000 - 1400 * k) / 2;
+    return `<svg class="page-svg" viewBox="0 0 1400 1000" xmlns="http://www.w3.org/2000/svg">` +
+      `<g transform="translate(0 ${y}) scale(${k})">${inner}</g>` +
+      `<rect x="688" y="0" width="24" height="1000" class="gutter"/>` + S.line(700, 0, 700, 1000, 'ln') +
+      `<g transform="translate(700 ${y}) scale(${k})">${inner}</g></svg>`;
   }
 
-  window.Templates = { S, W, H, L, R, PAGE_TEMPLATES, PLANNER_TEMPLATES, CATEGORIES, renderPageTemplate, esc };
+  window.Templates = { S, W, H, L, R, G, geom, PAGE_TEMPLATES, PLANNER_TEMPLATES, CATEGORIES, renderPageTemplate, esc };
 })();

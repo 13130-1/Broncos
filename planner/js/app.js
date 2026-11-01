@@ -117,11 +117,28 @@
     });
   }
 
+  /* ---------- Orientation ---------- */
+  const deviceOrientation = () => (window.innerWidth > window.innerHeight ? 'landscape' : 'portrait');
+  const isLand = p => p.orientation === 'landscape';
+  // Each orientation has its own page design, so writing is stored per orientation.
+  const contentKey = (p, base) => base + (isLand(p) ? '@L' : '');
+  const pageUsed = (pid_, pgId) => Store.hasContent(pid_, 'page:' + pgId) || Store.hasContent(pid_, 'page:' + pgId + '@L');
+  const ORIENT_ICON = { portrait: 'M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z', landscape: 'M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z' };
+  const orientIcon = o => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="${ORIENT_ICON[o]}"/></svg>`;
+  function toggleOrientation() {
+    const p = planner(); if (!p) return;
+    const next = isLand(p) ? 'portrait' : 'landscape';
+    Store.updatePlanner(p.id, { orientation: next });
+    Editor.setZoom(1);
+    renderToolbar(); renderPlanner();
+    toast(next === 'landscape' ? 'Landscape pages' : 'Portrait pages');
+  }
+
   /* ---------- Planner creation ---------- */
   const tpl = id => Templates.PLANNER_TEMPLATES.find(t => t.id === id);
-  function createFromTemplate(t, name) {
+  function createFromTemplate(t, name, orientation) {
     return Store.addPlanner({
-      name, color: t.color, theme: t.theme, views: [...t.views], templateId: t.id,
+      name, color: t.color, orientation: orientation || deviceOrientation(), theme: t.theme, views: [...t.views], templateId: t.id,
       sections: t.sections.map(([n, pages], i) => ({ id: Store.uid(), name: n, color: SECTION_COLORS[i % SECTION_COLORS.length], pages: pages.map(tp => ({ id: Store.uid(), template: tp })) })),
     });
   }
@@ -135,13 +152,16 @@
     const p1 = createFromTemplate(tpl('classic'), `My ${t.getFullYear()} Planner`);
     createFromTemplate(tpl('wellness'), 'Wellness Journal');
     createFromTemplate(tpl('work'), 'Work Notebook');
-    Store.setContent(p1.id, D.key('day', t), {
+    const welcomeText = 'Pick the pen to write here. In Navigate mode, tap any date to jump to it, swipe to turn pages, and double-click a time to add an event.';
+    const welcome = (sx, sy, tx, ty, tw, th, size) => ({
       strokes: [], items: [
-        { id: Store.uid(), type: 'sticker', kind: 'label', text: 'Welcome!', shape: 'banner', bg: '#ffd166', color: '#3b2f00', shade: true, pad: 10, x: 650, y: 1070, w: 250, h: 70, rot: -4 },
-        { id: Store.uid(), type: 'text', x: 640, y: 1155, w: 300, h: 190, rot: 0, size: 21, color: '#1d2b3a', font: 'hand', bold: false, italic: false, align: 'left',
-          text: 'Pick the pen to write here. In Navigate mode, tap any date to jump to it, swipe to turn pages, and double-click a time to add an event.' },
+        { id: Store.uid(), type: 'sticker', kind: 'label', text: 'Welcome!', shape: 'banner', bg: '#ffd166', color: '#3b2f00', shade: true, pad: 10, x: sx, y: sy, w: 250, h: 70, rot: -4 },
+        { id: Store.uid(), type: 'text', x: tx, y: ty, w: tw, h: th, rot: 0, size, color: '#1d2b3a', font: 'hand', bold: false, italic: false, align: 'left', text: welcomeText },
       ],
     });
+    // Put the note on today's page in both orientations
+    Store.setContent(p1.id, D.key('day', t), welcome(650, 1070, 640, 1155, 300, 190, 21));
+    Store.setContent(p1.id, D.key('day', t) + '@L', welcome(1080, 790, 830, 862, 510, 110, 19));
     Store.state.sync.pending = 0;
     Store.state.sync.lastSynced = Date.now();
   }
@@ -247,9 +267,15 @@
       <div class="lib-grid"></div>`, {
       wide: true,
       footer: `<label class="field inline"><span>Name</span><input type="text" class="lib-name" placeholder="Choose a template" maxlength="80"></label>
+        <div class="seg lib-orient" role="group" aria-label="Page orientation"><button type="button" data-v="portrait">${orientIcon('portrait')} Portrait</button><button type="button" data-v="landscape">${orientIcon('landscape')} Landscape</button></div>
         <button data-close>Cancel</button><button class="primary lib-create" disabled>Create planner</button>`,
       onMount: d => {
         const grid = d.querySelector('.lib-grid'), search = d.querySelector('.lib-search'), nameIn = d.querySelector('.lib-name'), create = d.querySelector('.lib-create');
+        let orient = deviceOrientation();
+        const og = d.querySelector('.lib-orient');
+        const syncO = () => $$('button', og).forEach(b => b.setAttribute('aria-pressed', b.dataset.v === orient));
+        syncO();
+        og.onclick = e => { const b = e.target.closest('button'); if (b) { orient = b.dataset.v; syncO(); } };
         const draw = () => {
           const q = search.value.toLowerCase();
           const list = Templates.PLANNER_TEMPLATES.filter(t => (cat === 'All' || t.cat === cat) &&
@@ -281,7 +307,7 @@
         nameIn.oninput = () => { customName = !!nameIn.value; };
         create.onclick = () => {
           const t = tpl(chosen); if (!t) return;
-          const p = createFromTemplate(t, nameIn.value.trim() || t.name);
+          const p = createFromTemplate(t, nameIn.value.trim() || t.name, orient);
           d.close();
           location.hash = '#/p/' + p.id;
           toast(`Created “${p.name}”`);
@@ -294,7 +320,7 @@
   /* ---------- Customize planner ---------- */
   function customizeDialog(id, after) {
     const p = Store.planner(id);
-    const draft = JSON.parse(JSON.stringify({ name: p.name, color: p.color, cover: p.cover || 'solid', theme: p.theme, views: p.views, dayStyle: p.dayStyle || 'schedule', sections: p.sections }));
+    const draft = JSON.parse(JSON.stringify({ name: p.name, color: p.color, cover: p.cover || 'solid', theme: p.theme, views: p.views, dayStyle: p.dayStyle || 'schedule', orientation: p.orientation || 'portrait', sections: p.sections }));
     const body = `
       <label class="field"><span>Name</span><input type="text" name="name" maxlength="80"></label>
       <div class="cz-grid">
@@ -303,6 +329,8 @@
         <fieldset><legend>Paper theme</legend><div class="seg" data-k="theme">${Object.entries(THEMES).map(([k, v]) => `<button type="button" data-v="${k}"><i class="paper-dot theme-${k}"></i>${v}</button>`).join('')}</div></fieldset>
         <fieldset><legend>Date layouts</legend><div class="checks">${ALL_VIEWS.map(v => `<label><input type="checkbox" value="${v}"> ${VIEW_NAMES[v]}</label>`).join('')}</div>
           <p class="note">Hiding a layout never deletes what you wrote on it. Turn it back on and your pages return.</p></fieldset>
+        <fieldset><legend>Page orientation</legend><div class="seg" data-k="orientation"><button type="button" data-v="portrait">${orientIcon('portrait')} Portrait</button><button type="button" data-v="landscape">${orientIcon('landscape')} Landscape</button></div>
+          <p class="note">Each orientation has its own page layout, so writing stays with the orientation it was made in. Switch back any time to see it.</p></fieldset>
         <fieldset><legend>Day page style</legend><div class="seg" data-k="dayStyle"><button type="button" data-v="schedule">Hourly schedule</button><button type="button" data-v="lined">Lined notes</button><button type="button" data-v="checklist">Checklist</button></div></fieldset>
       </div>
       <fieldset><legend>Sections</legend><ol class="sec-list"></ol><button type="button" class="add-sec">${icon('plus')} Add section</button></fieldset>
@@ -358,7 +386,7 @@
           if (b.dataset.a === 'up') [s[i - 1], s[i]] = [s[i], s[i - 1]];
           if (b.dataset.a === 'down') [s[i + 1], s[i]] = [s[i], s[i + 1]];
           if (b.dataset.a === 'del') {
-            const used = s[i].pages.some(pg => Store.hasContent(id, 'page:' + pg.id));
+            const used = s[i].pages.some(pg => pageUsed(id, pg.id));
             if (used && !(await confirmDlg(`“${s[i].name}” has pages with writing on them. Delete the section and its pages?`, 'Delete section', true))) return;
             s.splice(i, 1);
           }
@@ -414,13 +442,13 @@
     let bg, key, label;
     if (u.view === 'section') {
       const sec = currentSection(), pg = sec.pages[u.pageIndex];
-      bg = Templates.renderPageTemplate(pg.template);
-      key = 'page:' + pg.id;
+      bg = Templates.renderPageTemplate(pg.template, p.orientation);
+      key = contentKey(p, 'page:' + pg.id);
       label = sec.name;
     } else {
       const d = D.parse(u.date);
       bg = Layouts.render(u.view, d, p);
-      key = D.key(u.view, d);
+      key = contentKey(p, D.key(u.view, d));
       label = D.label(u.view, d);
     }
     $('#periodLabel').textContent = label;
@@ -430,7 +458,9 @@
     const pen = Editor.tools.pen, dark = p.theme === 'midnight';
     if (dark && pen.color === PEN_COLORS[0]) { pen.color = '#ffffff'; renderToolbar(); }
     else if (!dark && pen.color === '#ffffff') { pen.color = PEN_COLORS[0]; renderToolbar(); }
-    Editor.show({ bg, plannerId: p.id, pageKey: key, theme: p.theme, accent: p.color, keepScroll: opts.keepScroll });
+    Editor.show({ bg, plannerId: p.id, pageKey: key, theme: p.theme, accent: p.color, keepScroll: opts.keepScroll, orientation: p.orientation });
+    const ob = $('#toolbar [data-act=orient]');
+    if (ob) ob.innerHTML = orientIcon(p.orientation || 'portrait') + `<span>${isLand(p) ? 'Landscape' : 'Portrait'}</span>`;
     renderFooter(p, u);
   }
 
@@ -524,7 +554,7 @@
     if (a === 'delpage') {
       if (sec.pages.length === 1) { toast('A section needs at least one page. Delete the section in Customize.'); return; }
       const pg = sec.pages[u.pageIndex];
-      if (Store.hasContent(p.id, 'page:' + pg.id) && !(await confirmDlg('Delete this page and everything on it?', 'Delete page', true))) return;
+      if (pageUsed(p.id, pg.id) && !(await confirmDlg('Delete this page and everything on it?', 'Delete page', true))) return;
       sec.pages.splice(u.pageIndex, 1);
       u.pages[sec.id] = Math.max(0, u.pageIndex - 1);
       Store.updatePlanner(p.id, { sections: p.sections });
@@ -582,6 +612,7 @@
         <button class="tb zoom-label" data-act="zoomreset" title="Fit width (0)">${Math.round(Editor.zoom * 100)}%</button>
         <button class="tb" data-act="zoomin" aria-label="Zoom in" title="Zoom in (+)">${icon('plus')}</button>
       </div>
+      <button class="tb tb-orient" data-act="orient" title="Switch page orientation (O)" aria-label="Switch page orientation">${orientIcon((planner() || {}).orientation || 'portrait')}<span>${planner() && isLand(planner()) ? 'Landscape' : 'Portrait'}</span></button>
       <button class="tb tb-event" data-act="event" title="New calendar event">${icon('calPlus')}<span>Event</span></button>`;
   }
   function updateHistoryButtons() {
@@ -605,6 +636,7 @@
     if (a === 'zoomout') { Editor.setZoom(Editor.zoom - 0.25); renderToolbar(); }
     if (a === 'zoomreset') { Editor.setZoom(1); renderToolbar(); }
     if (a === 'sticker') stickerDialog();
+    if (a === 'orient') toggleOrientation();
     if (a === 'image') pickFile('image/*').then(f => f && Editor.insertImage(f).catch(err => toast(err.message)));
     if (a === 'event') {
       const u = ui();
@@ -910,7 +942,7 @@
         k(['Y'], 'Year'), k(['Q'], 'Quarter'), k(['M'], 'Month'), k(['W'], 'Week'), k(['D'], 'Day'), k(['5'], 'Multiyear'),
         k(['N'], 'Navigate mode (follow links, no drawing)'), k(['P'], 'Pen'), k(['H'], 'Highlighter'), k(['E'], 'Eraser'), k(['S'], 'Select / move'), k(['X'], 'Text box'),
         k(['Ctrl', 'Z'], 'Undo'), k(['Ctrl', 'Shift', 'Z'], 'Redo'), k(['Del'], 'Delete selected item'), k(['Esc'], 'Deselect, back to Navigate'),
-        k(['+', '−', '0'], 'Zoom in / out / fit'), k(['?'], 'This help')].join('')}</table>
+        k(['+', '−', '0'], 'Zoom in / out / fit'), k(['O'], 'Switch portrait / landscape'), k(['?'], 'This help')].join('')}</table>
       <ul class="tips">
         <li>Date links (days, months, years) only work in <strong>Navigate</strong> mode, so you never jump pages by accident while writing.</li>
         <li>With a pen or Apple Pencil, the stylus draws and your finger scrolls (palm rejection).</li>
@@ -945,6 +977,7 @@
     if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); step(-1); }
     else if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); step(1); }
     else if (key === 't') today();
+    else if (key === 'o') toggleOrientation();
     else if (views[key]) { if (planner().views.includes(views[key])) goToView(views[key], D.parse(ui().date)); }
     else if (toolKeys[key]) setTool(toolKeys[key]);
     else if ((e.key === 'Delete' || e.key === 'Backspace') && sel) { e.preventDefault(); Editor.deleteSelected(); }

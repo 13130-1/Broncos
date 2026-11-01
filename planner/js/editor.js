@@ -2,7 +2,7 @@
  * Tools: nav (follow links, swipe), pen, highlighter, eraser, select (move/resize/rotate), text.
  * Coordinates are in page units (1000 x 1400) regardless of zoom. */
 (function () {
-  const PW = 1000, PH = 1400;
+  let PW = 1000, PH = 1400;   // 1400 x 1000 in landscape
   const uid = () => Store.uid();
 
   let wrap, sizer, page, bgEl, itemsEl, canvas, ctx, base, bctx;
@@ -41,13 +41,20 @@
     new ResizeObserver(() => relayout()).observe(wrap);
   }
 
-  function show({ bg, plannerId, pageKey, theme, accent, keepScroll }) {
+  function show({ bg, plannerId, pageKey, theme, accent, keepScroll, orientation }) {
     finishEditing();
+    const land = orientation === 'landscape';
+    const resize = (land ? 1400 : 1000) !== PW;
     page.style.setProperty('--pc', accent || '#3d5a80');
     const same = cur && cur.plannerId === plannerId && cur.pageKey === pageKey;
     cur = { plannerId, pageKey };
     page.className = 'page theme-' + (theme || 'classic') + ' tool-' + tools.tool;
     bgEl.innerHTML = bg;
+    if (resize) {
+      PW = land ? 1400 : 1000; PH = land ? 1000 : 1400;
+      page.style.width = PW + 'px'; page.style.height = PH + 'px';
+      relayout(true);
+    }
     content = JSON.parse(JSON.stringify(Store.content(plannerId, pageKey)));
     if (!same) { selectedId = null; cb.onSelect && cb.onSelect(null); }
     renderItems();
@@ -63,17 +70,21 @@
     renderItems(); rebuildBase();
   }
 
-  function relayout() {
+  function relayout(force) {
     if (!wrap) return;
     const avail = Math.max(240, wrap.clientWidth - 24);
-    const fit = Math.min(avail / PW, 1.1);
+    const availH = Math.max(240, wrap.clientHeight - 60);
+    // Portrait fits the width and scrolls; landscape fits the whole page on screen when it can.
+    let fit = avail / PW;
+    if (PW > PH) fit = Math.max(Math.min(fit, availH / PH), Math.min(fit, 0.35));
+    fit = Math.min(fit, 1.1);
     scale = fit * zoom;
     sizer.style.width = PW * scale + 'px';
     sizer.style.height = PH * scale + 'px';
     page.style.transform = `scale(${scale})`;
     page.style.setProperty('--inv', (1 / scale).toFixed(3));
     const k = Math.min(3, (window.devicePixelRatio || 1) * scale * 1.0);
-    if (Math.abs(k - inkK) > 0.05 || canvas.width === 300) {
+    if (force || Math.abs(k - inkK) > 0.05 || canvas.width !== Math.round(PW * inkK)) {
       inkK = k;
       canvas.width = base.width = Math.round(PW * k);
       canvas.height = base.height = Math.round(PH * k);
