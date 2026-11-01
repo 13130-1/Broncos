@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Digital planner prototype: bookshelf of planners, calendar events, handwriting, stickers and templates.">
+<meta name="theme-color" content="#2f5d8a">
+<title>Digital Planner</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#pageWrap">Skip to page</a>
+
+<!-- Bookshelf -->
+<section id="shelf" class="screen" hidden>
+  <header class="topbar">
+    <div class="brand"><img src="icon.svg" alt="" width="28" height="28"><span>Digital Planner</span></div>
+    <span class="spacer"></span>
+    <button class="sync-pill" data-open-account aria-live="polite"><i></i><span>Synced</span></button>
+    <button class="btn-ghost" data-open-calendars><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg><span class="lbl">Calendars</span></button>
+  </header>
+  <main class="shelf-main">
+    <div class="shelf-head">
+      <h1>My Bookshelf</h1>
+      <div class="shelf-actions">
+        <input type="search" id="shelfSearch" placeholder="Search planners" aria-label="Search planners">
+        <select id="shelfSort" aria-label="Sort planners">
+          <option value="recent">Recently opened</option>
+          <option value="name">Name</option>
+          <option value="created">Newest</option>
+        </select>
+        <button class="primary" id="btnNew">+ New planner</button>
+      </div>
+    </div>
+    <div class="shelf-grid" id="shelfGrid"></div>
+  </main>
+</section>
+
+<!-- Planner -->
+<section id="plannerScreen" class="screen" hidden>
+  <header class="topbar planner-top">
+    <button class="btn-ghost" id="btnBack" aria-label="Back to bookshelf"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15ZM6.5 22H20v-5"/></svg><span class="lbl">Bookshelf</span></button>
+    <h1 id="pTitle" class="p-title"></h1>
+    <div class="period-nav">
+      <button class="icon-btn" id="btnPrev" aria-label="Previous page (Left arrow)"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+      <div class="period-wrap">
+        <button id="periodLabel" class="period-label" title="Go to a date"></button>
+        <input type="date" id="goDate" class="go-date" aria-label="Go to date" tabindex="-1">
+      </div>
+      <button class="icon-btn" id="btnNext" aria-label="Next page (Right arrow)"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+      <button id="btnToday" class="btn-today">Today</button>
+    </div>
+    <span class="spacer"></span>
+    <button class="sync-pill" data-open-account aria-live="polite"><i></i><span>Synced</span></button>
+    <button class="icon-btn" data-open-calendars aria-label="Calendars" title="Calendars"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg></button>
+    <button class="icon-btn" id="btnCustomize" aria-label="Customize planner" title="Customize planner"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></button>
+    <button class="icon-btn" id="btnHelp" aria-label="Shortcuts and tips" title="Shortcuts (?)"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20ZM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></svg></button>
+  </header>
+  <div class="planner-body">
+    <nav class="tabs" id="tabs" aria-label="Layouts and sections"></nav>
+    <div class="stage">
+      <div class="toolbar" id="toolbar" role="toolbar" aria-label="Page tools"></div>
+      <div class="ctxbar" id="ctxbar" hidden role="toolbar" aria-label="Selected item"></div>
+      <div class="page-wrap" id="pageWrap" tabindex="-1"></div>
+      <div class="page-footer" id="pageFooter"></div>
+    </div>
+  </div>
+</section>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="js/dates.js"></script>
+<script src="js/store.js"></script>
+<script src="js/templates.js"></script>
+<script src="js/layouts.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
