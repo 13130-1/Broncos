@@ -193,14 +193,18 @@
     const idx = Math.round((start - D.startOfWeek(qs)) / 6048e5);
     return Math.max(0, Math.min(13, 13 - idx));
   }
-  function previewLeft(x, w, top, date, n) {
+  function weeksRow(x, top, date, step = 26) {
     const left = weeksLeft(date);
     let s = S.text(x, top, 'WEEKS IN QUARTER', 't-th');
     for (let k = 13, i = 0; k >= 0; k--, i++) {
-      const cx = x + 175 + i * 26;
+      const cx = x + 175 + i * step;
       if (k === left) s += S.circle(cx, top - 4, 11, 'wk-on');
       s += S.text(cx, top + 1, k, k === left ? 't-wk on' : 't-wk', 'text-anchor="middle"');
     }
+    return s;
+  }
+  function previewLeft(x, w, top, date, n) {
+    let s = weeksRow(x, top, date);
     let y = top + 68;
     s += S.text(x, y, 'WEEKLY PREVIEW', 't-display');
     y += 70;
@@ -300,8 +304,99 @@
     return { svg: s, height: 30 + Math.max(1, Math.min(evs.length, max)) * 34 };
   }
 
-  function day(date, planner) {
+  /* ---------- Daily pages ----------
+   * Plan page: weeks left, day and date, routines, top 3, other tasks with a status
+   * legend, and an hourly schedule column with calendar events.
+   * Notes page: a short quote, ruled notes with margins, and a daily win. */
+  const QUOTES = [
+    ['Well begun is half done.', 'Aristotle'],
+    ['Do what you can, with what you have, where you are.', 'Theodore Roosevelt'],
+    ['Energy and persistence conquer all things.', 'Benjamin Franklin'],
+    ['It is not that we have a short time to live, but that we waste much of it.', 'Seneca'],
+    ['Lost time is never found again.', 'Benjamin Franklin'],
+    ['The secret of getting ahead is getting started.', 'Proverb'],
+    ['Little by little, one travels far.', 'Proverb'],
+    ['Begin at once to live.', 'Seneca'],
+  ];
+  function dayPlan(date) {
+    const x0 = 70, tx1 = 625, sx = 680, sx1 = 930;
+    let s = weeksRow(x0, 80, date, 25);
+    s += link('week', date, 'Week view', S.text(x0, 168, D.DOW[date.getDay()].toUpperCase(), 't-display'));
+    const nameW = D.DOW[date.getDay()].length * 40;
+    s += link('month', date, D.label('month', date), S.text(x0 + nameW + 40, 166, `/  ${D.MON_SHORT[date.getMonth()].toUpperCase()} ${date.getDate()}`, 't-date'));
+    // Routines
+    ['Morning routine', 'Workday startup', 'Workday shutdown', 'Evening routine'].forEach((t, i) => {
+      s += S.circle(sx + 7, 75 + i * 28, 7) + S.text(sx + 22, 80 + i * 28, t.toUpperCase(), 't-th');
+    });
+    // Top 3
+    s += S.label(x0, 262, 'Top 3 for the day', 'Your three most important tasks.');
+    for (let i = 0; i < 3; i++) {
+      const cy = 330 + i * 70;
+      s += S.circle(x0 + 20, cy, 20, 'big-check') + S.line(x0 + 60, cy - 16, tx1, cy - 16) + S.line(x0 + 60, cy + 16, tx1, cy + 16);
+    }
+    // Other tasks
+    s += S.label(x0, 580, 'Other tasks');
+    s += S.lines(x0, 610, tx1 - x0, 1240, 35) + S.line(x0 + 36, 610, x0 + 36, 1240);
+    // Status legend
+    [['✓', 'Done'], ['☐', 'To do'], ['↘', 'Delegate'], ['→', 'Defer'], ['✕', 'Delete'], ['/', 'Waiting'], ['✱', 'Important'], ['?', 'Question']].forEach(([g, t], i) => {
+      const lx = x0 + 40 + (i % 4) * 140, ly = 1290 + Math.floor(i / 4) * 34;
+      s += S.text(lx, ly, g, 't-glyph', 'text-anchor="middle"') + S.text(lx + 16, ly, t.toUpperCase(), 't-th');
+    });
+    // Schedule: 5am to 9pm, with half-hour lines
+    const top = 270, startH = 5, endH = 21, rh = (1330 - top) / (endH - startH), ex = sx + 34;
+    const evs = Store.eventsOn(date);
+    const allDay = evs.filter(e => e.allDay || !e.time), timed = evs.filter(e => !e.allDay && e.time);
+    s += `<rect x="${ex}" y="196" width="${sx1 - ex}" height="56" class="hit" data-newevent="${D.iso(date)}"/>`;
+    allDay.slice(0, 2).forEach((ev, k) => { s += evChip(ev, ex, 198 + k * 27, sx1 - ex, 24, { charW: 7.4 }); });
+    for (let h = startH; h <= endH; h++) {
+      const y = top + (h - startH) * rh;
+      s += S.text(sx + 4, y + 5, ((h + 11) % 12) + 1, 't-xs') + S.line(ex, y, sx1, y);
+      if (h < endH) {
+        s += S.line(ex, y + rh / 2, sx1, y + rh / 2, 'ln-faint');
+        s += `<rect x="${ex}" y="${y}" width="${sx1 - ex}" height="${rh}" class="hit" data-newevent="${D.iso(date)}T${String(h).padStart(2, '0')}:00"/>`;
+      }
+    }
+    const nowD = new Date();
+    if (D.sameDay(nowD, date)) {
+      const mins = nowD.getHours() * 60 + nowD.getMinutes();
+      if (mins >= startH * 60 && mins <= endH * 60) {
+        const y = top + (mins - startH * 60) / 60 * rh;
+        s += `<line x1="${ex - 4}" y1="${y}" x2="${sx1}" y2="${y}" class="now-line"/>` + S.circle(ex - 4, y, 4, 'now-dot');
+      }
+    }
+    layoutColumns(timed).forEach(o => {
+      const s0 = Math.max(o.s, startH * 60), e0 = Math.min(o.en, endH * 60);
+      if (e0 <= s0) return;
+      const y = top + (s0 - startH * 60) / 60 * rh, h = Math.max(22, (e0 - s0) / 60 * rh - 3);
+      const w = (sx1 - ex - 2) / o.n;
+      s += evChip(o.e, ex + 2 + o.col * w, y + 1, w - 3, h, { charW: 7.4 });
+    });
+    return s;
+  }
+  function dayNotes(date) {
+    const x0 = 70, x1 = 930;
+    const doy = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 864e5);
+    const [q, who] = QUOTES[doy % QUOTES.length];
+    let s = S.text(x1, 92, q, 't-quote', 'text-anchor="end"') + S.text(x1, 124, who.toUpperCase(), 't-th', 'text-anchor="end"');
+    s += S.label(x0, 214, 'Notes');
+    s += S.lines(x0, 244, x1 - x0, 1174, 35) + S.line(x0 + 36, 244, x0 + 36, 1174) + S.line(x1 - 70, 244, x1 - 70, 1174);
+    s += S.label(x0, 1242, 'Daily win') + S.lines(x0, 1292, x1 - x0, 1332, 40);
+    return s;
+  }
+  function dailySpread(date) {
+    const k = 0.7, y = (1000 - 1400 * k) / 2;
+    return `<svg class="page-svg" viewBox="0 0 1400 1000" xmlns="http://www.w3.org/2000/svg">` +
+      `<g transform="translate(0 ${y}) scale(${k})">${dayPlan(date)}</g>` +
+      `<rect x="688" y="0" width="24" height="1000" class="gutter"/>` + S.line(700, 0, 700, 1000, 'ln-faint') +
+      `<g transform="translate(700 ${y}) scale(${k})">${dayNotes(date)}</g></svg>`;
+  }
+
+  function day(date, planner, opts) {
     const style = (planner && planner.dayStyle) || 'schedule';
+    if (style === 'schedule') {
+      if (LAND) return dailySpread(date);
+      return S.wrap(opts && opts.dayPage === 'notes' ? dayNotes(date) : dayPlan(date));
+    }
     let s = dayHeader(date);
     if (style === 'lined' || style === 'checklist') {
       if (LAND) {

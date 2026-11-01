@@ -121,6 +121,8 @@
   const deviceOrientation = () => (window.innerWidth > window.innerHeight ? 'landscape' : 'portrait');
   const isLand = p => p.orientation === 'landscape';
   // Each orientation has its own page design, so writing is stored per orientation.
+  // Portrait daily pages are two pages (plan, notes); landscape shows both as one spread
+  const hasDayNotes = p => (p.dayStyle || 'schedule') === 'schedule' && !isLand(p);
   const contentKey = (p, base) => base + (isLand(p) ? '@L' : '');
   const pageUsed = (pid_, pgId) => Store.hasContent(pid_, 'page:' + pgId) || Store.hasContent(pid_, 'page:' + pgId + '@L');
   const ORIENT_ICON = { portrait: 'M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z', landscape: 'M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z' };
@@ -160,8 +162,8 @@
       ],
     });
     // Put the note on today's page in both orientations
-    Store.setContent(p1.id, D.key('day', t), welcome(650, 1070, 640, 1155, 300, 190, 21));
-    Store.setContent(p1.id, D.key('day', t) + '@L', welcome(1080, 790, 830, 862, 510, 110, 19));
+    Store.setContent(p1.id, 'daynotes:' + D.iso(t), welcome(110, 262, 120, 345, 700, 120, 24));
+    Store.setContent(p1.id, D.key('day', t) + '@L', welcome(780, 196, 790, 270, 520, 110, 19));
     Store.state.sync.pending = 0;
     Store.state.sync.lastSynced = Date.now();
   }
@@ -450,9 +452,11 @@
       if (u.view === 'week' && isLand(p) && u.weekPage === 'preview2') u.weekPage = 'preview';
       const wp = u.view === 'week' ? u.weekPage : null;
       const preview = wp === 'preview' || wp === 'preview2';
-      bg = Layouts.render(u.view, d, p, { weekPage: wp });
-      key = contentKey(p, preview ? (wp === 'preview2' ? 'weekpreview2:' : 'weekpreview:') + D.iso(D.startOfWeek(d)) : D.key(u.view, d));
-      label = (preview ? (isLand(p) ? 'Weekly preview · ' : `Weekly preview ${wp === 'preview2' ? 2 : 1}/2 · `) : '') + D.label(u.view, d);
+      const notes = u.view === 'day' && hasDayNotes(p) && u.dayPage === 'notes';
+      bg = Layouts.render(u.view, d, p, { weekPage: wp, dayPage: notes ? 'notes' : 'plan' });
+      key = contentKey(p, preview ? (wp === 'preview2' ? 'weekpreview2:' : 'weekpreview:') + D.iso(D.startOfWeek(d))
+        : notes ? 'daynotes:' + D.iso(d) : D.key(u.view, d));
+      label = (preview ? (isLand(p) ? 'Weekly preview · ' : `Weekly preview ${wp === 'preview2' ? 2 : 1}/2 · `) : notes ? 'Notes · ' : '') + D.label(u.view, d);
     }
     $('#periodLabel').textContent = label;
     $('#goDate').value = u.date;
@@ -498,7 +502,10 @@
       const weekSeg = u.view === 'week' ? `<div class="seg week-seg" role="group" aria-label="Week pages">
           <button data-f="wk-preview" aria-pressed="${u.weekPage === 'preview' || u.weekPage === 'preview2'}">Weekly preview</button>
           <button data-f="wk-days" aria-pressed="${u.weekPage !== 'preview' && u.weekPage !== 'preview2'}">7-day view</button></div>` : '';
-      f.innerHTML = weekSeg + `<span class="hint">${u.view === 'day' || (u.view === 'week' && !String(u.weekPage).startsWith('preview')) || u.view === 'month' ? 'Double-click a day or time to add an event · ' : ''}Swipe or press ← → to turn pages</span>
+      const daySeg = u.view === 'day' && hasDayNotes(p) ? `<div class="seg week-seg" role="group" aria-label="Day pages">
+          <button data-f="day-plan" aria-pressed="${u.dayPage !== 'notes'}">Plan</button>
+          <button data-f="day-notes" aria-pressed="${u.dayPage === 'notes'}">Notes</button></div>` : '';
+      f.innerHTML = weekSeg + daySeg + `<span class="hint">${u.view === 'day' || (u.view === 'week' && !String(u.weekPage).startsWith('preview')) || u.view === 'month' ? 'Double-click a day or time to add an event · ' : ''}Swipe or press ← → to turn pages</span>
         <div class="foot-actions"><button data-f="clear">Clear page</button></div>`;
     }
   }
@@ -510,6 +517,11 @@
       if (ni < 0) { toast('This is the first page'); return; }
       if (ni >= sec.pages.length) { toast('Last page. Use “+ Page” to add another.'); return; }
       u.pages[sec.id] = ni;
+    } else if (u.view === 'day' && hasDayNotes(planner())) {
+      const notes = u.dayPage === 'notes';
+      if (dir > 0 && !notes) u.dayPage = 'notes';
+      else if (dir < 0 && notes) u.dayPage = 'plan';
+      else { u.date = D.iso(D.addDays(D.parse(u.date), dir)); u.dayPage = dir > 0 ? 'plan' : 'notes'; }
     } else if (u.view === 'week') {
       // Pages run: weekly preview (two pages in portrait), 7-day view, then next week's preview
       const seq = isLand(planner()) ? ['preview', 'days'] : ['preview', 'preview2', 'days'];
@@ -531,6 +543,7 @@
     const p = planner(), u = ui();
     if (view === 'weekpreview') { view = 'week'; u.weekPage = 'preview'; }
     else if (view === 'week') u.weekPage = 'days';
+    if (view === 'day') u.dayPage = 'plan';
     let target = view;
     if (!p.views.includes(view)) {
       const i = FINE_TO_COARSE.indexOf(view);
@@ -550,6 +563,7 @@
   async function footerAction(a) {
     const p = planner(), u = ui(), sec = currentSection();
     if (a === 'wk-preview' || a === 'wk-days') { u.weekPage = a === 'wk-preview' ? 'preview' : 'days'; saveUI(); renderPlanner(); return; }
+    if (a === 'day-plan' || a === 'day-notes') { u.dayPage = a === 'day-notes' ? 'notes' : 'plan'; saveUI(); renderPlanner(); return; }
     if (a === 'prev') step(-1);
     if (a === 'next') step(1);
     if (a === 'clear') {
