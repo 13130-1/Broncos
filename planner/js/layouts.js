@@ -65,71 +65,152 @@
     return S.wrap(s);
   }
 
-  /* ---------- Year ---------- */
-  function year(date) {
-    const y = date.getFullYear();
-    let s = S.header(String(y)) +
-      link('multiyear', date, 'Five-year view', S.text(R, 105, `${D.multiStart(y)}–${D.multiStart(y) + 4} ›`, 't-link', 'text-anchor="end"'));
-    if (LAND) {
-      // 4 columns x 3 rows; quarter links sit in the header
-      for (let q = 0; q < 4; q++) s += link('quarter', new Date(y, q * 3, 1), `Quarter ${q + 1}`, S.text(R - 330 + q * 60, 105, `Q${q + 1}`, 't-link', 'text-anchor="end"'));
-      for (let m = 0; m < 12; m++) s += miniMonth(L + (m % 4) * 325, 150 + Math.floor(m / 4) * 272, 290, y, m, { dots: true, rowH: 34 });
-      return S.wrap(s);
-    }
-    for (let m = 0; m < 12; m++) {
-      const x = L + (m % 3) * 310, top = 160 + Math.floor(m / 3) * 298;
-      if (m % 3 === 0) s += link('quarter', new Date(y, m, 1), `Quarter ${m / 3 + 1}`, S.text(L - 40, top + 150, `Q${m / 3 + 1}`, 't-q', `transform="rotate(-90 ${L - 40} ${top + 150})" text-anchor="middle"`));
-      s += miniMonth(x, top, 280, y, m, { dots: true, rowH: 36 });
-    }
-    return S.wrap(s);
+  /* ---------- Shared page helpers ----------
+   * Spreads are two portrait pages (1000 x 1400) scaled into one landscape page. */
+  function spread(left, right) {
+    const k = 0.7, y = (1000 - 1400 * k) / 2;
+    return `<svg class="page-svg" viewBox="0 0 1400 1000" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" class="paper"/>` +
+      `<g transform="translate(0 ${y}) scale(${k})">${left}</g>` +
+      `<rect x="688" y="0" width="24" height="1000" class="gutter"/>` + S.line(700, 0, 700, 1000, 'ln-faint') +
+      `<g transform="translate(700 ${y}) scale(${k})">${right}</g></svg>`;
+  }
+  const portrait = inner => `<svg class="page-svg" viewBox="0 0 1000 1400" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" class="paper"/>${inner}</svg>`;
+  function quote(i, x1 = 930) {
+    const [q, who] = QUOTES[((i % QUOTES.length) + QUOTES.length) % QUOTES.length];
+    return S.text(x1, 92, q, 't-quote', 'text-anchor="end"') + S.text(x1, 124, who.toUpperCase(), 't-th', 'text-anchor="end"');
   }
 
-  /* ---------- Quarter ---------- */
-  function quarter(date) {
-    const y = date.getFullYear(), q = D.quarter(date), m0 = (q - 1) * 3;
-    let s = S.header(`Quarter ${q}`) + link('year', date, `Year ${y}`, S.text(R, 105, `${y} ›`, 't-link', 'text-anchor="end"'));
-    if (LAND) {
-      for (let i = 0; i < 3; i++) s += miniMonth(L + i * 430, 150, 400, y, m0 + i, { dots: true, rowH: 34, focusDays: true });
-      s += S.h(L, 470, 'Quarterly goals') + S.checks(L, 520, 600, 9, 48);
-      for (let i = 0; i < 3; i++) {
-        const top = 470 + i * 165;
-        s += link('month', new Date(y, m0 + i, 1), D.MONTHS[m0 + i], S.text(720, top, `${D.MONTHS[m0 + i].toUpperCase()} FOCUS`, 't-h'));
-        s += S.lines(720, top + 42, R - 720, top + 125, 40);
-      }
-      return S.wrap(s);
+  /* ---------- Year: 12-month view ----------
+   * Six months per page, two columns by three rows. Each month heading
+   * (JAN / 2026 ...) links to that month; all-day events are listed as the majors. */
+  function monthBlock(x, y, w, yr, m) {
+    const first = new Date(yr, m, 1), t = D.today();
+    const cur = t.getFullYear() === yr && t.getMonth() === m;
+    let s = link('month', first, `${D.MONTHS[m]} ${yr}`,
+      S.text(x, y, `${D.MON_SHORT[m].toUpperCase()} / ${yr}`, 't-month-h') + (cur ? S.circle(x + 150, y - 6, 4, 'wk-on') : ''));
+    const n = 10, gap = 31, ly0 = y + 30;
+    s += S.lines(x, ly0, w, ly0 + (n - 1) * gap, gap);
+    // Majors: all-day events this month, one per line
+    const seen = new Set(), items = [];
+    const days = new Date(yr, m + 1, 0).getDate();
+    for (let d = 1; d <= days && items.length < n; d++) {
+      const dt = new Date(yr, m, d);
+      Store.eventsOn(dt).filter(e => e.allDay || !e.time).forEach(e => {
+        const k = e.id + (e.recurrence === 'none' ? '' : d);
+        if (!seen.has(k) && items.length < n) { seen.add(k); items.push([d, e]); }
+      });
     }
-    for (let i = 0; i < 3; i++) s += miniMonth(L + i * 310, 160, 280, y, m0 + i, { dots: true, rowH: 38, focusDays: true });
-    s += S.h(L, 520, 'Quarterly goals') + S.checks(L, 570, R - L, 5, 48);
-    for (let i = 0; i < 3; i++) {
-      const x = L + i * 300;
-      s += link('month', new Date(y, m0 + i, 1), D.MONTHS[m0 + i], S.text(x, 860, `${D.MONTHS[m0 + i].toUpperCase()} FOCUS`, 't-h'));
-      s += S.lines(x, 905, 280, 1355, 40);
-    }
-    return S.wrap(s);
-  }
-
-  /* ---------- Month ---------- */
-  function month(date) {
-    const y = date.getFullYear(), m = date.getMonth(), today = D.today();
-    const g = LAND ? { ch: 135, top: 165, dowY: 155, chipY: 40, chipH: 24, chipStep: 28, moreY: 128 }
-      : { ch: 168, top: 200, dowY: 185, chipY: 44, chipH: 26, chipStep: 30, moreY: 156 };
-    const cw = (R - L) / 7;
-    let s = S.header(D.MONTHS[m]) +
-      link('quarter', date, `Quarter ${D.quarter(date)}`, S.text(R - 90, 105, `Q${D.quarter(date)}`, 't-link', 'text-anchor="end"')) +
-      link('year', date, `Year ${y}`, S.text(R, 105, `${y} ›`, 't-link', 'text-anchor="end"'));
-    D.DOW_SHORT.slice(1).concat('Sun').forEach((d, i) => { s += S.text(L + i * cw + 10, g.dowY, d.toUpperCase(), 't-th'); });
-    D.monthMatrix(y, m).forEach((d, i) => {
-      const x = L + (i % 7) * cw, cy = g.top + Math.floor(i / 7) * g.ch;
-      const out = d.getMonth() !== m;
-      s += `<rect x="${x}" y="${cy}" width="${cw}" height="${g.ch}" class="cell${out ? ' dim' : ''}${D.sameDay(d, today) ? ' cell-today' : ''}" data-newevent="${D.iso(d)}"/>`;
-      if (i % 7 === 0) s += link('week', d, `Week of ${D.label('week', d)}`, S.text(x - 22, cy + 30, '›', 't-link'));
-      s += link('day', d, D.label('day', d), S.text(x + 10, cy + 30, d.getDate(), out ? 't-day dim' : 't-day'));
-      const evs = out ? [] : Store.eventsOn(d);
-      evs.slice(0, 3).forEach((ev, k) => { s += evChip(ev, x + 4, cy + g.chipY + k * g.chipStep, cw - 8, g.chipH, { charW: 7.6 }); });
-      if (evs.length > 3) s += link('day', d, `${evs.length - 3} more events`, S.text(x + cw - 8, cy + 30, `+${evs.length - 3}`, 't-xs', 'text-anchor="end"'), false);
+    items.forEach(([d, e], i) => {
+      s += `<g class="ev" data-event="${e.id}" tabindex="0" role="button" aria-label="${esc(e.title)}">` +
+        S.text(x + 6, ly0 + i * gap - 8, `${d}  ${trunc(e.title, 34)}`, 't-ev-line') + '</g>';
     });
-    if (!LAND) s += S.h(L, 1250, 'Notes') + S.lines(L, 1290, R - L, 1360, 35);
-    return S.wrap(s);
+    return s;
+  }
+  function twelvePage(yr, half) {
+    let s = half === 0
+      ? S.text(70, 112, '12-MONTH VIEW', 't-display') + S.text(70, 158, 'List major events and projects, month by month.', 't-instr') +
+        link('multiyear', new Date(yr, 0, 1), 'Five-year view', S.text(930, 112, `${D.multiStart(yr)}–${D.multiStart(yr) + 4} ›`, 't-th', 'text-anchor="end"'))
+      : quote(yr + 3);
+    for (let i = 0; i < 6; i++) {
+      const m = half * 6 + i;
+      s += monthBlock(70 + (i % 2) * 470, 250 + Math.floor(i / 2) * 370, 390, yr, m);
+    }
+    return s;
+  }
+  function year(date, planner, opts) {
+    const yr = date.getFullYear();
+    if (LAND) return spread(twelvePage(yr, 0), twelvePage(yr, 1));
+    return portrait(twelvePage(yr, opts && opts.sub === 'h2' ? 1 : 0));
+  }
+
+  /* ---------- Quarter: quarterly preview ----------
+   * Review page: wins, last quarter's goals with %, what worked.
+   * Plan page: continue, change, and a setup checklist for the quarter ahead. */
+  function quarterReview(date) {
+    const yr = date.getFullYear(), q = D.quarter(date), m0 = (q - 1) * 3, x0 = 70, x1 = 930, w = x1 - x0;
+    let s = S.text(x0, 112, 'QUARTERLY PREVIEW', 't-display') + S.text(x1, 110, `Q${q} ${yr}`, 't-date', 'text-anchor="end"');
+    for (let i = 0; i < 3; i++) s += link('month', new Date(yr, m0 + i, 1), D.MONTHS[m0 + i], S.text(x0 + i * 110, 160, `${D.MON_SHORT[m0 + i].toUpperCase()} ›`, 't-th'));
+    s += link('year', date, `Year ${yr}`, S.text(x0 + 330, 160, `${yr} ›`, 't-th'));
+    s += S.label(x0, 232, 'After-action review', 'List 3–5 of your top wins from last quarter.') + S.lines(x0, 278, w, 458, 36);
+    s += S.text(x0, 522, 'Look back at last quarter’s goals. How far did you get?', 't-instr') + S.text(x1 - 40, 528, '%', 't-th', 'text-anchor="middle"');
+    s += S.lines(x0, 556, w, 808, 36) + S.line(x1 - 80, 536, x1 - 80, 808);
+    s += S.text(x0, 872, 'What worked? What didn’t? Why?', 't-instr') + S.lines(x0, 918, w, 1314, 36);
+    return s;
+  }
+  function quarterPlan(date) {
+    const x0 = 70, x1 = 930, w = x1 - x0;
+    let s = quote(D.quarter(date) + date.getFullYear());
+    s += S.text(x0, 212, 'What will you continue?', 't-instr') + S.lines(x0, 258, w, 510, 36);
+    s += S.text(x0, 576, 'What will you change?', 't-instr') + S.lines(x0, 622, w, 874, 36);
+    s += S.label(x0, 950, 'Next quarter overview', 'Set up the quarter ahead.');
+    ['Review your goals and your longer-range plans.',
+      'Choose up to three goals for the quarter; update Annual Goals and Goal Detail.',
+      'Add major events to the Calendar and the 12-Month View.',
+      'Adjust your daily rituals and model week if needed.',
+      'Add the quarter’s key projects to the Project Tracker.'].forEach((t, i) => {
+      const y = 1012 + i * 56;
+      s += S.circle(x0 + 8, y - 6, 8) + S.text(x0 + 30, y, t, 't-instr');
+    });
+    return s;
+  }
+  function quarter(date, planner, opts) {
+    if (LAND) return spread(quarterReview(date), quarterPlan(date));
+    return portrait(opts && opts.sub === 'qp2' ? quarterPlan(date) : quarterReview(date));
+  }
+
+  /* ---------- Month: calendar ----------
+   * Grey date squares, Saturday and Sunday kept together, and a notes column.
+   * Landscape: Mon–Thu on the left page, Fri–Sun and notes on the right.
+   * Portrait: all seven days on one page, notes along the bottom. */
+  function calRows(y, m) {
+    const mx = D.monthMatrix(y, m);
+    return mx.slice(35).some(d => d.getMonth() === m) ? 6 : 5;
+  }
+  function calCell(d, m, x, y, w, h) {
+    const inMonth = d.getMonth() === m, today = D.sameDay(d, D.today());
+    let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="frame"${inMonth ? ` data-newevent="${D.iso(d)}"` : ''}/>`;
+    if (!inMonth) return s + S.rect(x + 8, y + 8, 30, 30, 'date-box');
+    s += link('day', d, D.label('day', d), S.rect(x + 8, y + 8, 30, 30, today ? 'wk-on' : 'date-box') +
+      S.text(x + 23, y + 29, d.getDate(), today ? 't-datebox on' : 't-datebox', 'text-anchor="middle"'));
+    const evs = Store.eventsOn(d), max = Math.max(0, Math.floor((h - 50) / 26));
+    evs.slice(0, max).forEach((ev, k) => { s += evChip(ev, x + 5, y + 46 + k * 26, w - 10, 23, { charW: 7.4 }); });
+    if (evs.length > max) s += link('day', d, `${evs.length - max} more events`, S.text(x + w - 8, y + 28, `+${evs.length - max}`, 't-xs', 'text-anchor="end"'), false);
+    return s;
+  }
+  function calHeader(x, y, w, labels) {
+    let s = S.rect(x, y - 30, w * labels.length, 30, 'frame');
+    labels.forEach((l, i) => { s += S.text(x + i * w + w / 2, y - 10, l.toUpperCase(), 't-day-label', 'text-anchor="middle"'); });
+    return s;
+  }
+  function calTitle(date) {
+    const yr = date.getFullYear();
+    return S.text(70, 112, 'CALENDAR', 't-display') +
+      S.text(70, 162, 'MONTH', 't-th') + S.text(150, 163, `${D.MONTHS[date.getMonth()].toUpperCase()} ${yr}`, 't-date') +
+      link('quarter', date, `Quarter ${D.quarter(date)}`, S.text(850, 112, `Q${D.quarter(date)} ›`, 't-th', 'text-anchor="end"')) +
+      link('year', date, `Year ${yr}`, S.text(930, 112, `${yr} ›`, 't-th', 'text-anchor="end"'));
+  }
+  function month(date) {
+    const y = date.getFullYear(), m = date.getMonth(), mx = D.monthMatrix(y, m), rows = calRows(y, m);
+    const names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const weekLinks = (x, top, rh) => mx.slice(0, rows * 7).filter((_, i) => i % 7 === 0)
+      .map((d, r) => link('week', d, `Week of ${D.label('week', d)}`, S.text(x, top + r * rh + 30, '›', 't-link'))).join('');
+    if (LAND) {
+      const top = 262, rh = (1340 - top) / rows, cw = 215;
+      let left = calTitle(date) + calHeader(70, top, cw, names.slice(0, 4)) + weekLinks(40, top, rh);
+      let right = quote(m + y) + calHeader(70, top, cw, ['Friday', 'Saturday', 'Sunday', 'Notes']);
+      for (let r = 0; r < rows; r++) for (let c = 0; c < 7; c++) {
+        const d = mx[r * 7 + c];
+        if (c < 4) left += calCell(d, m, 70 + c * cw, top + r * rh, cw, rh);
+        else right += calCell(d, m, 70 + (c - 4) * cw, top + r * rh, cw, rh);
+      }
+      right += S.rect(70 + 3 * cw, top, cw, 1340 - top, 'frame') + S.lines(70 + 3 * cw + 12, top + 40, cw - 24, 1320, 36);
+      return spread(left, right);
+    }
+    const top = 232, bottom = 1200, rh = (bottom - top) / rows, cw = 860 / 7;
+    let s = calTitle(date) + calHeader(70, top, cw, names.map(n => n.slice(0, 3))) + weekLinks(44, top, rh);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < 7; c++) s += calCell(mx[r * 7 + c], m, 70 + c * cw, top + r * rh, cw, rh);
+    s += S.label(70, 1250, 'Notes', 'Projects and reminders for the month.') + S.lines(70, 1288, 860, 1360, 36);
+    return portrait(s);
   }
 
   /* ---------- Week: 7-day view ----------
@@ -144,7 +225,7 @@
   const pages = () => (LAND ? [[90, 640], [760, 1310]] : [[60, 480], [520, 940]]);
 
   function week(date, planner, opts) {
-    if (opts && (opts.weekPage === 'preview' || opts.weekPage === 'preview2')) return weekPreview(date, opts.weekPage === 'preview2');
+    if (opts && (opts.sub === 'preview' || opts.sub === 'preview2')) return weekPreview(date, opts.sub === 'preview2');
     const start = D.startOfWeek(date), today = D.today();
     const [lp, rp] = pages();
     const top = LAND ? 90 : 100, bottom = LAND ? 950 : 1350, rh = (bottom - top) / 3;
@@ -308,7 +389,7 @@
    * Plan page: weeks left, day and date, routines, top 3, other tasks with a status
    * legend, and an hourly schedule column with calendar events.
    * Notes page: a short quote, ruled notes with margins, and a daily win. */
-  const QUOTES = [
+  var QUOTES = [
     ['Well begun is half done.', 'Aristotle'],
     ['Do what you can, with what you have, where you are.', 'Theodore Roosevelt'],
     ['Energy and persistence conquer all things.', 'Benjamin Franklin'],
@@ -385,7 +466,7 @@
   }
   function dailySpread(date) {
     const k = 0.7, y = (1000 - 1400 * k) / 2;
-    return `<svg class="page-svg" viewBox="0 0 1400 1000" xmlns="http://www.w3.org/2000/svg">` +
+    return `<svg class="page-svg" viewBox="0 0 1400 1000" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" class="paper"/>` +
       `<g transform="translate(0 ${y}) scale(${k})">${dayPlan(date)}</g>` +
       `<rect x="688" y="0" width="24" height="1000" class="gutter"/>` + S.line(700, 0, 700, 1000, 'ln-faint') +
       `<g transform="translate(700 ${y}) scale(${k})">${dayNotes(date)}</g></svg>`;
@@ -395,7 +476,7 @@
     const style = (planner && planner.dayStyle) || 'schedule';
     if (style === 'schedule') {
       if (LAND) return dailySpread(date);
-      return S.wrap(opts && opts.dayPage === 'notes' ? dayNotes(date) : dayPlan(date));
+      return S.wrap(opts && opts.sub === 'notes' ? dayNotes(date) : dayPlan(date));
     }
     let s = dayHeader(date);
     if (style === 'lined' || style === 'checklist') {

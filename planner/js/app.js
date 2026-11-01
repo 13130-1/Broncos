@@ -122,7 +122,35 @@
   const isLand = p => p.orientation === 'landscape';
   // Each orientation has its own page design, so writing is stored per orientation.
   // Portrait daily pages are two pages (plan, notes); landscape shows both as one spread
-  const hasDayNotes = p => (p.dayStyle || 'schedule') === 'schedule' && !isLand(p);
+  /* ---------- Multi-page views ----------
+   * Some dated views span several pages, like a paper planner. Landscape shows two
+   * pages side by side, so it needs fewer page turns than portrait. */
+  function subPages(p, view) {
+    const L = isLand(p);
+    switch (view) {
+      case 'week': return L ? ['preview', 'days'] : ['preview', 'preview2', 'days'];
+      case 'day': return (p.dayStyle || 'schedule') === 'schedule' && !L ? ['plan', 'notes'] : ['plan'];
+      case 'year': return L ? ['all'] : ['h1', 'h2'];
+      case 'quarter': return L ? ['all'] : ['qp1', 'qp2'];
+      default: return ['main'];
+    }
+  }
+  const SUB_DEFAULT = { week: 'days' };
+  const SUB_LABEL = { preview: 'Weekly preview', preview2: 'Preview (2)', days: '7-day view', plan: 'Plan', notes: 'Notes', h1: 'Jan–Jun', h2: 'Jul–Dec', qp1: 'Review', qp2: 'Plan ahead' };
+  const SUB_TITLE = { preview: 'Weekly preview', preview2: 'Weekly preview 2/2', notes: 'Notes', h1: '12-month view, Jan–Jun', h2: '12-month view, Jul–Dec', qp1: 'Quarterly preview 1/2', qp2: 'Quarterly preview 2/2' };
+  // Secondary pages store their writing under their own key
+  const SUB_KEY = { preview: 'weekpreview', preview2: 'weekpreview2', notes: 'daynotes', h2: 'year-h2', qp2: 'quarter-qp2' };
+  function curSub(p, u) {
+    const list = subPages(p, u.view);
+    u.sub = u.sub || {};
+    let sub = u.sub[u.view];
+    if (!list.includes(sub)) {
+      if (sub === 'preview2') sub = 'preview';
+      if (!list.includes(sub)) sub = list.includes(SUB_DEFAULT[u.view]) ? SUB_DEFAULT[u.view] : list[0];
+      u.sub[u.view] = sub;
+    }
+    return sub;
+  }
   const contentKey = (p, base) => base + (isLand(p) ? '@L' : '');
   const pageUsed = (pid_, pgId) => Store.hasContent(pid_, 'page:' + pgId) || Store.hasContent(pid_, 'page:' + pgId + '@L');
   const ORIENT_ICON = { portrait: 'M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z', landscape: 'M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z' };
@@ -449,14 +477,13 @@
       label = sec.name;
     } else {
       const d = D.parse(u.date);
-      if (u.view === 'week' && isLand(p) && u.weekPage === 'preview2') u.weekPage = 'preview';
-      const wp = u.view === 'week' ? u.weekPage : null;
-      const preview = wp === 'preview' || wp === 'preview2';
-      const notes = u.view === 'day' && hasDayNotes(p) && u.dayPage === 'notes';
-      bg = Layouts.render(u.view, d, p, { weekPage: wp, dayPage: notes ? 'notes' : 'plan' });
-      key = contentKey(p, preview ? (wp === 'preview2' ? 'weekpreview2:' : 'weekpreview:') + D.iso(D.startOfWeek(d))
-        : notes ? 'daynotes:' + D.iso(d) : D.key(u.view, d));
-      label = (preview ? (isLand(p) ? 'Weekly preview · ' : `Weekly preview ${wp === 'preview2' ? 2 : 1}/2 · `) : notes ? 'Notes · ' : '') + D.label(u.view, d);
+      const sub = curSub(p, u), base = D.key(u.view, d);
+      bg = Layouts.render(u.view, d, p, { sub });
+      key = contentKey(p, SUB_KEY[sub] ? SUB_KEY[sub] + ':' + base.split(':')[1] : base);
+      let title = SUB_TITLE[sub];
+      if (sub === 'preview' && !isLand(p)) title = 'Weekly preview 1/2';
+      if (sub === 'all' && u.view === 'quarter') title = 'Quarterly preview';
+      label = (title ? title + ' · ' : '') + D.label(u.view, d);
     }
     $('#periodLabel').textContent = label;
     $('#goDate').value = u.date;
@@ -497,17 +524,34 @@
           <button data-f="paper" title="Change paper">Paper: ${esc(t ? t.name : pg.template)}</button>
           <button data-f="delpage" aria-label="Delete page">${icon('trash')}</button>
           <button data-f="clear">Clear</button>
+          ${guideKey(p, u) ? `<button data-f="guide">${icon('help')} Guide</button>` : ''}
         </div>`;
     } else {
-      const weekSeg = u.view === 'week' ? `<div class="seg week-seg" role="group" aria-label="Week pages">
-          <button data-f="wk-preview" aria-pressed="${u.weekPage === 'preview' || u.weekPage === 'preview2'}">Weekly preview</button>
-          <button data-f="wk-days" aria-pressed="${u.weekPage !== 'preview' && u.weekPage !== 'preview2'}">7-day view</button></div>` : '';
-      const daySeg = u.view === 'day' && hasDayNotes(p) ? `<div class="seg week-seg" role="group" aria-label="Day pages">
-          <button data-f="day-plan" aria-pressed="${u.dayPage !== 'notes'}">Plan</button>
-          <button data-f="day-notes" aria-pressed="${u.dayPage === 'notes'}">Notes</button></div>` : '';
-      f.innerHTML = weekSeg + daySeg + `<span class="hint">${u.view === 'day' || (u.view === 'week' && !String(u.weekPage).startsWith('preview')) || u.view === 'month' ? 'Double-click a day or time to add an event · ' : ''}Swipe or press ← → to turn pages</span>
-        <div class="foot-actions"><button data-f="clear">Clear page</button></div>`;
+      const list = subPages(p, u.view), sub = curSub(p, u);
+      const seg = list.length > 1 ? `<div class="seg week-seg" role="group" aria-label="Pages">${list.map(x =>
+        `<button data-sub="${x}" aria-pressed="${x === sub}">${SUB_LABEL[x]}</button>`).join('')}</div>` : '';
+      const evHint = (u.view === 'day' && sub === 'plan') || (u.view === 'week' && sub === 'days') || u.view === 'month';
+      f.innerHTML = seg + `<span class="hint">${evHint ? 'Double-click a day or time to add an event · ' : ''}Swipe or press ← → to turn pages</span>
+        <div class="foot-actions">${guideKey(p, u) ? `<button data-f="guide">${icon('help')} Guide</button>` : ''}<button data-f="clear">Clear page</button></div>`;
     }
+  }
+
+  /* ---------- Page guide ---------- */
+  function guideKey(p, u) {
+    let k;
+    if (u.view === 'section') { const sec = currentSection(); k = sec.pages[u.pageIndex].template; }
+    else {
+      const sub = curSub(p, u);
+      k = u.view === 'day' ? (sub === 'notes' ? 'day:notes' : (p.dayStyle || 'schedule') === 'schedule' ? 'day:plan' : null)
+        : u.view === 'week' ? (sub === 'days' ? 'week:days' : 'week:preview') : u.view;
+    }
+    return k && Guide.pages[k] ? k : null;
+  }
+  function guideDialog(k) {
+    const [title, items] = Guide.pages[k];
+    dialog(`How to use: ${title}`, `<ol class="guide">${items.map(([h, t]) => `<li><strong>${esc(h)}</strong><p>${esc(t)}</p></li>`).join('')}</ol>`, {
+      footer: '<button class="primary" data-close>Got it</button>',
+    });
   }
 
   function step(dir) {
@@ -517,19 +561,14 @@
       if (ni < 0) { toast('This is the first page'); return; }
       if (ni >= sec.pages.length) { toast('Last page. Use “+ Page” to add another.'); return; }
       u.pages[sec.id] = ni;
-    } else if (u.view === 'day' && hasDayNotes(planner())) {
-      const notes = u.dayPage === 'notes';
-      if (dir > 0 && !notes) u.dayPage = 'notes';
-      else if (dir < 0 && notes) u.dayPage = 'plan';
-      else { u.date = D.iso(D.addDays(D.parse(u.date), dir)); u.dayPage = dir > 0 ? 'plan' : 'notes'; }
-    } else if (u.view === 'week') {
-      // Pages run: weekly preview (two pages in portrait), 7-day view, then next week's preview
-      const seq = isLand(planner()) ? ['preview', 'days'] : ['preview', 'preview2', 'days'];
-      const i = Math.max(0, seq.indexOf(u.weekPage || 'days')) + dir;
-      if (i >= 0 && i < seq.length) u.weekPage = seq[i];
-      else { u.date = D.iso(D.shift('week', D.parse(u.date), dir)); u.weekPage = dir > 0 ? seq[0] : seq[seq.length - 1]; }
     } else {
-      u.date = D.iso(D.shift(u.view, D.parse(u.date), dir));
+      // Turn through this period's pages, then on to the next period's first page
+      const list = subPages(planner(), u.view), i = list.indexOf(curSub(planner(), u)) + dir;
+      if (i >= 0 && i < list.length) u.sub[u.view] = list[i];
+      else {
+        u.date = D.iso(D.shift(u.view, D.parse(u.date), dir));
+        u.sub[u.view] = dir > 0 ? list[0] : list[list.length - 1];
+      }
     }
     saveUI(); renderPlanner();
     flashPage(dir);
@@ -541,9 +580,12 @@
   }
   function goToView(view, date) {
     const p = planner(), u = ui();
-    if (view === 'weekpreview') { view = 'week'; u.weekPage = 'preview'; }
-    else if (view === 'week') u.weekPage = 'days';
-    if (view === 'day') u.dayPage = 'plan';
+    u.sub = u.sub || {};
+    if (view === 'weekpreview') { view = 'week'; u.sub.week = 'preview'; }
+    else if (view === 'week') u.sub.week = 'days';
+    else if (view === 'day') u.sub.day = 'plan';
+    else if (view === 'year' && !isLand(p)) u.sub.year = (date || D.parse(u.date)).getMonth() < 6 ? 'h1' : 'h2';
+    else if (view === 'quarter') u.sub.quarter = isLand(p) ? 'all' : 'qp1';
     let target = view;
     if (!p.views.includes(view)) {
       const i = FINE_TO_COARSE.indexOf(view);
@@ -562,8 +604,7 @@
 
   async function footerAction(a) {
     const p = planner(), u = ui(), sec = currentSection();
-    if (a === 'wk-preview' || a === 'wk-days') { u.weekPage = a === 'wk-preview' ? 'preview' : 'days'; saveUI(); renderPlanner(); return; }
-    if (a === 'day-plan' || a === 'day-notes') { u.dayPage = a === 'day-notes' ? 'notes' : 'plan'; saveUI(); renderPlanner(); return; }
+    if (a === 'guide') { guideDialog(guideKey(p, u)); return; }
     if (a === 'prev') step(-1);
     if (a === 'next') step(1);
     if (a === 'clear') {
@@ -972,6 +1013,10 @@
         k(['N'], 'Navigate mode (follow links, no drawing)'), k(['P'], 'Pen'), k(['H'], 'Highlighter'), k(['E'], 'Eraser'), k(['S'], 'Select / move'), k(['X'], 'Text box'),
         k(['Ctrl', 'Z'], 'Undo'), k(['Ctrl', 'Shift', 'Z'], 'Redo'), k(['Del'], 'Delete selected item'), k(['Esc'], 'Deselect, back to Navigate'),
         k(['+', '−', '0'], 'Zoom in / out / fit'), k(['O'], 'Switch portrait / landscape'), k(['?'], 'This help')].join('')}</table>
+      <h3 class="sub">Getting started with the planning system</h3>
+      <ol class="tips">${Guide.start.map(t => `<li>${esc(t)}</li>`).join('')}</ol>
+      <p class="note">Every page has a <strong>Guide</strong> button at the bottom of the screen that explains how to use it.</p>
+      <h3 class="sub">Tips</h3>
       <ul class="tips">
         <li>Date links (days, months, years) only work in <strong>Navigate</strong> mode, so you never jump pages by accident while writing.</li>
         <li>With a pen or Apple Pencil, the stylus draws and your finger scrolls (palm rejection).</li>
@@ -1060,7 +1105,11 @@
     });
     $('#toolbar').addEventListener('click', toolbarClick);
     $('#toolbar').addEventListener('input', toolbarInput);
-    $('#pageFooter').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (b) footerAction(b.dataset.f); });
+    $('#pageFooter').addEventListener('click', e => {
+      const sb = e.target.closest('[data-sub]');
+      if (sb) { const u = ui(); u.sub = u.sub || {}; u.sub[u.view] = sb.dataset.sub; saveUI(); renderPlanner(); return; }
+      const b = e.target.closest('[data-f]'); if (b) footerAction(b.dataset.f);
+    });
     ctxEvents();
     document.addEventListener('keydown', onKey);
     window.addEventListener('hashchange', route);

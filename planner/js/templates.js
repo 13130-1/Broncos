@@ -75,9 +75,84 @@
       return s;
     },
     wrap(inner, extraClass = '') {
-      return `<svg class="page-svg ${extraClass}" viewBox="0 0 ${G.W} ${G.H}" xmlns="http://www.w3.org/2000/svg" aria-hidden="false">${inner}</svg>`;
+      return `<svg class="page-svg ${extraClass}" viewBox="0 0 ${G.W} ${G.H}" xmlns="http://www.w3.org/2000/svg" aria-hidden="false"><rect width="100%" height="100%" class="paper"/>${inner}</svg>`;
     },
   };
+
+  /* ---------- Planning-system page builders (portrait page coordinates) ---------- */
+  const QUOTES = [
+    ['What gets scheduled gets done.', 'Proverb'],
+    ['Plans are nothing; planning is everything.', 'Dwight D. Eisenhower'],
+    ['Well begun is half done.', 'Aristotle'],
+    ['We are what we repeatedly do.', 'After Aristotle'],
+    ['Never leave till tomorrow that which you can do today.', 'Benjamin Franklin'],
+    ['Order and simplification are the first steps toward mastery.', 'Thomas Mann'],
+    ['Lost time is never found again.', 'Benjamin Franklin'],
+  ];
+  function quoteText(i) {
+    const [q, who] = QUOTES[i % QUOTES.length];
+    return S.text(930, 92, q, 't-quote', 'text-anchor="end"') + S.text(930, 124, who.toUpperCase(), 't-th', 'text-anchor="end"');
+  }
+  function notesPage(title, instr) {
+    return quoteText(0) + S.label(70, 214, title, instr) + S.lines(70, 256, 860, 1350, 36);
+  }
+  function annualGoals() {
+    const x0 = 70, x1 = 930, cols = [x0, x0 + 50, x0 + 100, x1 - 70, x1], top = 230, hdr = 36, rh = 96, rows = 10;
+    let s = S.text(x0, 112, 'ANNUAL GOALS', 't-display');
+    s += S.rect(x0, top, x1 - x0, hdr, 'frame');
+    s += S.text(x0 + 25, top + 24, '✓', 't-th', 'text-anchor="middle"') + S.text(x0 + 75, top + 24, '#', 't-th', 'text-anchor="middle"');
+    s += `<text x="${(cols[2] + cols[3]) / 2}" y="${top + 24}" text-anchor="middle"><tspan class="t-h">GOAL STATEMENT</tspan><tspan class="t-instr" dx="12">Write each goal here.</tspan></text>`;
+    s += S.text(x1 - 35, top + 24, 'Q', 't-th', 'text-anchor="middle"');
+    const y0 = top + hdr, y1 = y0 + rows * rh;
+    for (let r = 1; r <= rows; r++) s += S.line(x0, y0 + r * rh, x1, y0 + r * rh) + S.line(cols[2], y0 + r * rh - rh / 2, cols[3], y0 + r * rh - rh / 2, 'ln-faint');
+    cols.forEach(x => { s += S.line(x, top, x, y1); });
+    s += S.text(500, y1 + 60, 'Q — WRITE THE NUMBER OF THE QUARTER WHEN THE GOAL IS DUE.', 't-th', 'text-anchor="middle"');
+    return s;
+  }
+  function ritualTable(y, label, rows) {
+    const x0 = 70, x1 = 930, rh = 34, hdr = 32, top = y + 20;
+    let s = S.text(x0, y, label.toUpperCase(), 't-th');
+    s += S.rect(x0, top, x1 - x0, hdr, 'frame');
+    s += S.text(x0 + 25, top + 22, '#', 't-th', 'text-anchor="middle"') + S.text((x0 + 50 + x1 - 100) / 2, top + 22, 'ACTIVITIES', 't-th', 'text-anchor="middle"') + S.text(x1 - 50, top + 22, 'TIME', 't-th', 'text-anchor="middle"');
+    const y0 = top + hdr, y1 = y0 + rows * rh;
+    for (let r = 1; r <= rows; r++) s += S.line(x0, y0 + r * rh, x1, y0 + r * rh);
+    [x0, x0 + 50, x1 - 100, x1].forEach(x => { s += S.line(x, top, x, y1); });
+    s += S.text(x1 - 112, y1 + 34, 'TOTAL TIME', 't-th', 'text-anchor="end"') + S.rect(x1 - 100, y1 + 10, 100, 36, 'frame');
+    return s;
+  }
+  function weekGrid(days, withHours) {
+    const x0 = 70, x1 = 930, top = 230, hdr = 30, theme = 32, startH = 5, endH = 21, bottom = 1360;
+    const dx = withHours ? x0 + 76 : x0, cw = (x1 - dx) / days.length;
+    let s = withHours ? S.text(x0, 112, 'MODEL WEEK', 't-display') + S.text(x0, 158, 'Plan how your week would run if your time were fully yours.', 't-instr') : '';
+    s += S.rect(dx, top - hdr, x1 - dx, hdr, 'frame') + S.rect(dx, top, x1 - dx, theme, 'fill-soft');
+    days.forEach((d, i) => { s += S.text(dx + i * cw + cw / 2, top - 10, d.toUpperCase(), 't-day-label', 'text-anchor="middle"'); });
+    const gTop = top + theme, rh = (bottom - gTop) / (endH - startH);
+    if (withHours) {
+      s += S.rect(x0, gTop, 30, bottom - gTop, 'fill-soft') + S.text(x0 + 20, (gTop + bottom) / 2, 'ENERGY', 't-th', `transform="rotate(-90 ${x0 + 20} ${(gTop + bottom) / 2})" text-anchor="middle"`);
+      s += S.text(x0 + 4, top + 22, 'THEME', 't-grid b');
+    }
+    for (let h = startH; h <= endH; h++) {
+      const y = gTop + (h - startH) * rh;
+      if (withHours) s += S.text(x0 + 52, y + 5, ((h + 11) % 12) + 1, 't-xs', 'text-anchor="middle"') + S.line(x0 + 34, y, dx, y, 'ln-faint');
+      s += S.line(dx, y, x1, y);
+      if (h < endH) s += S.line(dx, y + rh / 2, x1, y + rh / 2, 'ln-faint');
+    }
+    for (let i = 0; i <= days.length; i++) s += S.line(dx + i * cw, top - hdr, dx + i * cw, bottom);
+    return s;
+  }
+  function projectTracker(withTitle) {
+    const x0 = 70, x1 = 930, top = 225, rh = 112;
+    let s = withTitle ? S.text(x0, 112, 'PROJECT TRACKER', 't-display') : quoteText(1);
+    s += S.text(x0, 200, 'NAME', 't-th') + S.text(x1 - 60, 200, 'DUE', 't-th', 'text-anchor="middle"');
+    for (let r = 0; r < 10; r++) {
+      const y = top + r * rh;
+      s += S.line(x0, y + 50, x1 - 130, y + 50) + S.line(x1 - 120, y + 50, x1, y + 50) + S.line(x1 - 120, y + 12, x1 - 120, y + 50, 'ln');
+      s += S.line(x0, y + 78, x1, y + 78, 'ln');
+      for (let k = 0; k <= 4; k++) s += S.line(x0 + k * (x1 - x0) / 4, y + 70, x0 + k * (x1 - x0) / 4, y + 78, 'ln');
+      s += S.text(x0, y + 96, '0%', 't-grid') + S.text(x1, y + 96, '100%', 't-grid', 'text-anchor="end"');
+    }
+    return s;
+  }
 
   const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -146,6 +221,30 @@
         s += S.line(x0, gy, x0, gy + 3 * rh, 'ln') + S.line(x1, gy, x1, gy + 3 * rh, 'ln');
         return s;
       },
+    },
+    'annual-goals': {
+      name: 'Annual goals', cat: 'Productivity',
+      draw: () => annualGoals(),
+      spread: [() => annualGoals(), () => notesPage('Goal notes', 'Ideas, reasons and milestones for this year’s goals.')],
+    },
+    rituals: {
+      name: 'Daily rituals', cat: 'Productivity',
+      draw: () => S.text(70, 112, 'DAILY RITUALS', 't-display') +
+        ritualTable(190, 'Morning', 5) + ritualTable(480, 'Workday startup', 5) + ritualTable(770, 'Workday shutdown', 5) + ritualTable(1060, 'Evening', 5),
+      spread: [
+        () => S.text(70, 112, 'DAILY RITUALS', 't-display') + ritualTable(230, 'Morning', 10) + ritualTable(730, 'Evening', 10),
+        () => quoteText(5) + ritualTable(230, 'Workday startup', 10) + ritualTable(730, 'Workday shutdown', 10),
+      ],
+    },
+    idealweek: {
+      name: 'Model week', cat: 'Productivity',
+      draw: () => weekGrid(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], true),
+      spread: [() => weekGrid(['Monday', 'Tuesday', 'Wednesday'], true), () => quoteText(6) + weekGrid(['Thursday', 'Friday', 'Saturday', 'Sunday'], false)],
+    },
+    'project-tracker': {
+      name: 'Project tracker', cat: 'Professional',
+      draw: () => projectTracker(true),
+      spread: [() => projectTracker(true), () => projectTracker(false)],
     },
     habit: {
       name: 'Habit tracker', cat: 'Productivity',
@@ -285,7 +384,7 @@
   /* ---------- Planner templates (catalog) ---------- */
   const DATED = ['year', 'quarter', 'month', 'week', 'day'];
   const PLANNER_TEMPLATES = [
-    { id: 'classic', name: 'Classic Planner', cat: 'Productivity', color: '#3d5a80', theme: 'classic', views: DATED, desc: 'Year to day, plus goals, to-dos and notes.', sections: [['Goals', ['goals']], ['To-Do', ['todo', 'daily']], ['Notes', ['lined', 'lined', 'dot']]] },
+    { id: 'classic', name: 'Goal & Focus Planner', cat: 'Productivity', color: '#3d5a80', theme: 'classic', views: DATED, desc: 'Quarterly system: annual goals, goal details, rituals, model week, projects, and daily and weekly pages.', sections: [['Annual goals', ['annual-goals']], ['Goals', ['goals', 'goals', 'goals']], ['Rituals', ['rituals']], ['Model week', ['idealweek']], ['Projects', ['project-tracker']], ['Notes', ['lined', 'lined', 'dot']]] },
     { id: 'focus', name: 'Focus & Productivity', cat: 'Productivity', color: '#c8553d', theme: 'sand', views: ['month', 'week', 'day'], desc: 'Pomodoro sessions, routines and weekly tasks.', sections: [['Focus', ['pomodoro', 'pomodoro']], ['Routines', ['routine']], ['Weekly', ['weekly-tasks']], ['Habits', ['habit']]] },
     { id: 'work', name: 'Work & Business', cat: 'Professional', color: '#1f3a5f', theme: 'classic', views: ['quarter', 'month', 'week', 'day'], desc: 'Projects, meetings and client records.', sections: [['Projects', ['project', 'project']], ['Meetings', ['meeting', 'meeting', 'meeting']], ['Clients', ['client', 'client']], ['Notes', ['dot', 'dot']]] },
     { id: 'social', name: 'Social Media Planner', cat: 'Professional', color: '#8e5572', theme: 'blush', views: ['month', 'week'], desc: 'Content calendar, post log and idea pages.', sections: [['Content', ['social', 'social']], ['Ideas', ['dot', 'dot']]] },
@@ -325,11 +424,11 @@
     }
     // Structured templates become a two-page spread, like an open paper planner.
     geom('portrait');
-    const inner = t.draw(), k = 0.7, y = (1000 - 1400 * k) / 2;
-    return `<svg class="page-svg" viewBox="0 0 1400 1000" xmlns="http://www.w3.org/2000/svg">` +
-      `<g transform="translate(0 ${y}) scale(${k})">${inner}</g>` +
-      `<rect x="688" y="0" width="24" height="1000" class="gutter"/>` + S.line(700, 0, 700, 1000, 'ln') +
-      `<g transform="translate(700 ${y}) scale(${k})">${inner}</g></svg>`;
+    const [a, b] = t.spread ? t.spread.map(f => f()) : [t.draw(), t.draw()], k = 0.7, y = (1000 - 1400 * k) / 2;
+    return `<svg class="page-svg" viewBox="0 0 1400 1000" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" class="paper"/>` +
+      `<g transform="translate(0 ${y}) scale(${k})">${a}</g>` +
+      `<rect x="688" y="0" width="24" height="1000" class="gutter"/>` + S.line(700, 0, 700, 1000, 'ln-faint') +
+      `<g transform="translate(700 ${y}) scale(${k})">${b}</g></svg>`;
   }
 
   window.Templates = { S, W, H, L, R, G, geom, PAGE_TEMPLATES, PLANNER_TEMPLATES, CATEGORIES, renderPageTemplate, esc };

@@ -231,6 +231,11 @@ label.ctl { border: none; padding: 0 4px; }
 .t-date { font: 400 24px var(--font-page); letter-spacing: .18em; fill: var(--muted) !important; }
 .t-quote { font: italic 20px var(--font-display); fill: var(--ink) !important; }
 .t-glyph { font-size: 15px; fill: var(--muted) !important; }
+.t-month-h { font-size: 17px; font-weight: 600; letter-spacing: .22em; fill: var(--ink) !important; }
+.t-ev-line { font-size: 16px; fill: var(--ink) !important; }
+.t-datebox { font-size: 15px; font-weight: 500; fill: var(--ink) !important; }
+.t-datebox.on { fill: var(--paper) !important; }
+.date-box { fill: var(--soft); stroke: none; }
 .t-grid { font-size: 11px; fill: var(--muted) !important; }
 .t-grid.b { font-weight: 600; fill: var(--ink) !important; }
 .t-wk { font-size: 12px; font-weight: 600; fill: var(--muted) !important; }
@@ -368,6 +373,10 @@ legend { font-size: 13px; font-weight: 700; padding: 0 6px; }
 .row.wrap { flex-wrap: wrap; }
 
 /* Help */
+.guide { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; }
+.guide li::marker { font-weight: 700; color: var(--muted); }
+.guide strong { display: block; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; }
+.guide p { margin: 2px 0 0; color: var(--text); }
 .keys { border-collapse: collapse; width: 100%; font-size: 14px; }
 .keys td { padding: 5px 6px; border-bottom: 1px solid var(--border); }
 .keys td:first-child { white-space: nowrap; width: 1%; }

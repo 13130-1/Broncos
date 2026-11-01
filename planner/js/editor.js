@@ -49,7 +49,11 @@
     const same = cur && cur.plannerId === plannerId && cur.pageKey === pageKey;
     cur = { plannerId, pageKey };
     page.className = 'page theme-' + (theme || 'classic') + ' tool-' + tools.tool;
-    bgEl.innerHTML = bg;
+    // Swap in a fresh node so the browser repaints the whole page, not just changed areas
+    const fresh = bgEl.cloneNode(false);
+    fresh.innerHTML = bg;
+    bgEl.replaceWith(fresh);
+    bgEl = fresh;
     if (resize) {
       PW = land ? 1400 : 1000; PH = land ? 1000 : 1400;
       page.style.width = PW + 'px'; page.style.height = PH + 'px';
@@ -146,20 +150,23 @@
 
   /* ---------- Navigation mode: links, events, swipe ---------- */
   function bindNav() {
-    bgEl.addEventListener('click', e => {
+    page.addEventListener('click', e => {
+      if (!e.target.closest('.page-bg')) return;
       if (tools.tool !== 'nav' || swipeConsumed) return;
       const ev = e.target.closest('[data-event]');
       if (ev) { cb.onEvent(ev.dataset.event); return; }
       const ln = e.target.closest('[data-link]');
       if (ln) { const [v, d] = ln.dataset.link.split('|'); cb.onLink(v, D.parse(d)); }
     });
-    bgEl.addEventListener('dblclick', e => {
+    page.addEventListener('dblclick', e => {
+      if (!e.target.closest('.page-bg')) return;
       if (tools.tool !== 'nav') return;
       if (e.target.closest('[data-event],[data-link]')) return;
       const t = e.target.closest('[data-newevent]');
       if (t) cb.onNewEvent(t.dataset.newevent);
     });
-    bgEl.addEventListener('keydown', e => {
+    page.addEventListener('keydown', e => {
+      if (!e.target.closest('.page-bg')) return;
       if (e.key !== 'Enter' && e.key !== ' ') return;
       const t = e.target.closest('[data-event],[data-link]');
       if (!t) return;

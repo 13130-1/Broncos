@@ -1,7 +1,7 @@
 /* Offline cache for the app shell. Planner data itself lives in localStorage. */
-const CACHE = 'planner-shell-v1';
+const CACHE = 'planner-shell-v2';
 const SHELL = ['./', 'index.html', 'styles.css', 'icon.svg', 'manifest.webmanifest',
-  'js/dates.js', 'js/store.js', 'js/templates.js', 'js/layouts.js', 'js/calendar.js', 'js/editor.js', 'js/app.js'];
+  'js/dates.js', 'js/store.js', 'js/templates.js', 'js/layouts.js', 'js/calendar.js', 'js/editor.js', 'js/guide.js', 'js/app.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
